@@ -4,11 +4,12 @@ This directory currently contains only the empty canvas/workspace exploration. I
 
 ## Reading order
 
-1. [Blank canvas mockup](WHITEBOARD_FOUNDATION.md)
+1. [Blank canvas foundation and v1 learning](WHITEBOARD_FOUNDATION.md)
+2. [Ten modern blank canvas directions](BLANK_CANVAS_DIRECTIONS.md)
 
 ## Design sequence
 
-1. Review and accept the empty canvas direction.
+1. Shortlist and synthesize the empty canvas direction.
 2. Design basic canvas behavior.
 3. Design how people express, select, arrange, and connect.
 4. Design how external material enters the surface.

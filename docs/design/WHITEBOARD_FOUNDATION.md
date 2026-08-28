@@ -1,6 +1,6 @@
-# Blank canvas mockup
+# Blank canvas foundation
 
-- **Status:** Visual exploration v1
+- **Status:** v1 reviewed; header retained, canvas direction rejected
 - **Date:** 2026-08-28
 - **Scope:** The empty canvas/workspace only
 
@@ -10,7 +10,7 @@ In Thought Studio, **whiteboard** means the blank spatial canvas and workspace. 
 
 This mockup intentionally stops before objects, interactions, toolbars, Sources, collaborators, agents, and Creations.
 
-## Direction: Quiet Field
+## v1 direction: Quiet Field
 
 The canvas is a warm, nearly white continuous field. A soft central brightness provides focus without creating a visible page boundary. Fine texture prevents the space from feeling sterile.
 
@@ -27,13 +27,15 @@ There is no grid, sidebar, toolbar, prompt, template, illustration, or call to a
 
 ![Thought Studio blank canvas v1](mockups/blank-canvas-v1.png)
 
-## Review questions
+## Review outcome
 
-- Does the canvas feel warm and premium or merely beige?
-- Does the empty field feel inviting without instruction?
-- Is the floating identity bar too prominent?
-- Should the canvas be more neutral, brighter, or more tactile?
-- Does the space feel continuous without a visible grid?
+- Retain the compact identity bar and its information hierarchy.
+- Retain the feeling that the board begins with nothing.
+- Reject the warm beige field, tactile texture, and physical-whiteboard association.
+- Redesign the canvas as modern, neutral, and natively digital.
+- Express identity through light, depth, spatial calibration, and restrained color—not simulated material.
+
+The follow-up exploration is documented in [Blank canvas directions](BLANK_CANVAS_DIRECTIONS.md).
 
 ## Explicitly deferred
 
@@ -47,4 +49,4 @@ There is no grid, sidebar, toolbar, prompt, template, illustration, or call to a
 - Agent presence and actions
 - Creation workflows
 
-No interaction specification should be produced until this visual direction is reviewed.
+No interaction specification should be produced until a v2 direction is shortlisted and synthesized.

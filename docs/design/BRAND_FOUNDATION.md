@@ -23,15 +23,20 @@ The mark is a four-lobed, hand-painted bloom made from Studio Blue, Vermilion, L
 
 It represents different perspectives gathering around an open center.
 
+![Selected Thought Bloom mark](brand/thought-bloom-mark-selected.png)
+
+The selected geometry uses four distinct outward-facing petals. Each petal has a short organic taper at its outside corner and a broad, rounded edge facing the center. This silhouette is the canonical mark.
+
 ### Mark rules
 
 - Preserve the four-color balance and visible handmade edge.
-- Let each lobe stay softly smudged and organically irregular, while keeping comparable visual weight and distance from the open center.
+- Keep the selected outward-facing petal silhouette; do not replace the petals with circles or generic rounded squares.
+- Let each petal retain slight organic asymmetry while keeping comparable visual weight and distance from the open center.
 - Keep the center open: do not add an inward line, notch, stem, or connector to any petal.
 - Use a one-color black version when reproduction requires it.
 - Minimum digital size: 18 px.
 - Do not add gradients, faces, dimensional effects, or additional lobes.
-- The precise vector geometry remains provisional until the logo is refined independently.
+- Use [`brand/thought-bloom-mark-selected.png`](brand/thought-bloom-mark-selected.png) as the selected visual source of truth. A production vector must be traced from this asset without changing the silhouette.
 
 ## Color system
 
@@ -110,7 +115,7 @@ Texture provides authorship in marks and illustrations. The canvas itself remain
 
 ## Applied blank canvas
 
-![Primary Play blank canvas](mockups/blank-canvas-v8-primary-play-red-teardrop.png)
+![Primary Play blank canvas](mockups/blank-canvas-v10-primary-play-selected-logo.png)
 
 The blank board applies Primary Play without turning the workspace into a poster:
 
@@ -129,7 +134,7 @@ The blank board applies Primary Play without turning the workspace into a poster
 
 ## Explicitly deferred
 
-- Final logo geometry and production lockups
+- Additional horizontal, stacked, and one-color production lockups
 - Component anatomy and states
 - Semantic color assignments
 - Collaborator and agent identity colors

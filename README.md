@@ -14,7 +14,48 @@ The board is not a feature. The board is the product and the operating environme
 
 ## Status
 
-Discovery and product definition. This repository is intentionally docs-first; implementation and architecture choices have not been made.
+The product foundation remains docs-first, and the first interaction prototype is now underway. The repository includes a responsive localhost workspace shell based on the accepted Primary Play visual system.
+
+The application is implemented in React and strict TypeScript. JavaScript source files are disabled by the TypeScript configuration.
+
+## Run the workspace locally
+
+Requirements: Node.js and npm.
+
+```bash
+npm install
+npm run dev
+```
+
+Open the local address printed by Vite (normally `http://127.0.0.1:5173/`).
+
+Create a production build with:
+
+```bash
+npm run build
+```
+
+Run the TypeScript compiler without producing output with:
+
+```bash
+npm run typecheck
+```
+
+### Current implementation milestone
+
+- Native full-viewport Chalk canvas with the accepted micro-dot field
+- Collapsible workspace sidebar with Pinned, Recents, and Projects
+- Responsive Board tool dock for implemented creation and view controls
+- Exact selected Thought Bloom logo asset
+- Functional multi-Board navigation and local per-Board persistence
+- Exclusive Pinned placement with retained Project ownership
+- Pan and zoom across a shared Board coordinate system
+- Contextual text and note creation
+- Selection, dragging, keyboard movement, editing, and deletion
+- Undo and redo for meaningful Object operations
+- Local Board-item persistence across reloads
+
+See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. Multi-selection, Frames, Sources, and agent participation are the next interaction milestones. The approved mockup is a visual reference; the coded interface is the product implementation.
 
 ## Start here
 
@@ -27,8 +68,9 @@ Discovery and product definition. This repository is intentionally docs-first; i
 7. [Ten modern blank canvas directions](docs/design/BLANK_CANVAS_DIRECTIONS.md)
 8. [Visual identity foundation](docs/design/BRAND_FOUNDATION.md)
 9. [Ten artistic brand directions](docs/design/ARTISTIC_BRAND_DIRECTIONS.md)
-10. [Agent experience](docs/AGENT_EXPERIENCE.md)
-11. [Initial roadmap](docs/ROADMAP.md)
+10. [Interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md)
+11. [Agent experience](docs/AGENT_EXPERIENCE.md)
+12. [Initial roadmap](docs/ROADMAP.md)
 
 The documentation index is in [docs/README.md](docs/README.md).
 

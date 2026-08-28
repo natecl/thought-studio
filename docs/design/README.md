@@ -1,6 +1,6 @@
 # Experience design
 
-This directory currently contains only the empty canvas/workspace exploration. Interaction design is deferred.
+This directory contains the accepted visual foundation, the active Board interaction prototype, and the first workspace-shell exploration.
 
 ## Reading order
 
@@ -9,14 +9,15 @@ This directory currently contains only the empty canvas/workspace exploration. I
 3. [Ten artistic brand directions](ARTISTIC_BRAND_DIRECTIONS.md)
 4. [Accepted Primary Play visual identity foundation](BRAND_FOUNDATION.md)
 5. [Archived Editorial Spatialism proposal](EDITORIAL_SPATIALISM_ARCHIVE.md)
+6. [Board interaction prototype](INTERACTION_PROTOTYPE.md)
+7. [Workspace shell and sidebar](WORKSPACE_SHELL.md)
 
 ## Design sequence
 
-1. Review the Primary Play application to the blank canvas.
-2. Design basic canvas behavior.
-3. Design how people express, select, arrange, and connect.
-4. Design how external material enters the surface.
-5. Design how people and agents collaborate.
-6. Design how a Frame becomes a Creation.
-
-Only the first step is active.
+1. Primary Play application to the blank Board — accepted.
+2. Basic Board behavior — implemented for desktop pointer and keyboard.
+3. Workspace shell and multi-Board navigation — active review.
+4. Expression, selection, arrangement, and connection.
+5. External material entering the surface.
+6. Human and Agent collaboration.
+7. A Frame becoming a Creation.

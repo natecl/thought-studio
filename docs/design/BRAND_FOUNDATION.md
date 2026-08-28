@@ -26,6 +26,7 @@ It represents different perspectives gathering around an open center.
 ### Mark rules
 
 - Preserve the four-color balance and visible handmade edge.
+- Let each lobe stay softly smudged and organically irregular, while keeping comparable visual weight and distance from the open center.
 - Keep the center open: do not add an inward line, notch, stem, or connector to any petal.
 - Use a one-color black version when reproduction requires it.
 - Minimum digital size: 18 px.
@@ -109,7 +110,7 @@ Texture provides authorship in marks and illustrations. The canvas itself remain
 
 ## Applied blank canvas
 
-![Primary Play blank canvas](mockups/blank-canvas-v4-primary-play-clean.png)
+![Primary Play blank canvas](mockups/blank-canvas-v5-primary-play-balanced-mark.png)
 
 The blank board applies Primary Play without turning the workspace into a poster:
 

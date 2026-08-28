@@ -6,11 +6,12 @@ This directory currently contains only the empty canvas/workspace exploration. I
 
 1. [Blank canvas foundation and v1 learning](WHITEBOARD_FOUNDATION.md)
 2. [Ten modern blank canvas directions](BLANK_CANVAS_DIRECTIONS.md)
-3. [Visual identity foundation](BRAND_FOUNDATION.md)
+3. [Archived first visual identity proposal](BRAND_FOUNDATION.md)
+4. [Ten artistic brand directions](ARTISTIC_BRAND_DIRECTIONS.md)
 
 ## Design sequence
 
-1. Review and accept the visual identity foundation.
+1. Select and synthesize the artistic brand foundation.
 2. Design basic canvas behavior.
 3. Design how people express, select, arrange, and connect.
 4. Design how external material enters the surface.

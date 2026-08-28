@@ -1,12 +1,14 @@
 # Visual identity foundation
 
 - **Direction:** Editorial Spatialism
-- **Status:** Proposed foundation v0.1
+- **Status:** Archived proposal; not accepted
 - **Date:** 2026-08-28
 - **Source:** Blank canvas direction 09, Editorial White
 - **Scope:** Brand primitives and visual styling; no UI components
 
 ## Brand idea
+
+> **Review outcome:** The direction was considered too clinical, digital, and technology-led. It remains here as a record of the first proposal, but its mark, palette, typography, and tokens are not canonical. See [Artistic brand directions](ARTISTIC_BRAND_DIRECTIONS.md) for the active exploration.
 
 **Editorial Spatialism** gives Thought Studio the clarity of an editorial system and the openness of a spatial environment.
 
@@ -16,9 +18,9 @@ The product should feel quiet before thought begins, precise while thought takes
 
 ![Thought Studio Editorial Spatialism board](brand/editorial-spatialism-board-v1.png)
 
-The board was generated with the built-in ImageGen tool using Editorial White as the primary visual reference. This document is the source of truth for exact values; the board communicates the intended gestalt.
+The board was generated with the built-in ImageGen tool using Editorial White as the primary visual reference. The values below record that proposal; they are not the current source of truth.
 
-Machine-readable values are maintained in [`brand/tokens.json`](brand/tokens.json).
+The proposal's machine-readable values are retained in [`brand/tokens.json`](brand/tokens.json).
 
 ## Identity mark: Open Orbit
 

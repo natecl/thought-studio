@@ -72,7 +72,7 @@ Bright white with large horizontal layers of nearly invisible frosted depth. Spa
 
 Pure white, exceptional restraint, and a barely visible coordinate field. The closest expression of Notion-like clarity and confidence.
 
-**Selected as the visual foundation.** Its brand and styling implications are defined in [Visual identity foundation](BRAND_FOUNDATION.md).
+**Selected as the canvas foundation.** The first attempt to extrapolate its restraint into the whole brand was too clinical and has been archived. Brand identity is being explored separately in [Artistic brand directions](ARTISTIC_BRAND_DIRECTIONS.md).
 
 ![Editorial White](mockups/blank-canvas-v2-09-editorial-white.png)
 
@@ -88,4 +88,4 @@ These mockups were generated with the built-in ImageGen tool. The common prompt 
 
 ## Decision
 
-Editorial White is the selected foundation. Brand primitives and visual styling are established before any component or interaction design begins.
+Editorial White remains the selected blank-canvas direction. Brand primitives and visual styling must be selected from the artistic exploration before any component or interaction design begins.

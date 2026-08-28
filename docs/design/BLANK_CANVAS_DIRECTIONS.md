@@ -1,6 +1,6 @@
 # Blank canvas directions
 
-- **Status:** Visual exploration v2
+- **Status:** Direction 09 selected
 - **Date:** 2026-08-28
 - **Scope:** The empty canvas/workspace only
 
@@ -72,6 +72,8 @@ Bright white with large horizontal layers of nearly invisible frosted depth. Spa
 
 Pure white, exceptional restraint, and a barely visible coordinate field. The closest expression of Notion-like clarity and confidence.
 
+**Selected as the visual foundation.** Its brand and styling implications are defined in [Visual identity foundation](BRAND_FOUNDATION.md).
+
 ![Editorial White](mockups/blank-canvas-v2-09-editorial-white.png)
 
 ## 10 — Spatial Aurora
@@ -84,6 +86,6 @@ A calm white center held by a soft perimeter of cobalt, lavender, cyan, and cora
 
 These mockups were generated with the built-in ImageGen tool. The common prompt held the approved header and absolute blankness constant, rejected physical-whiteboard cues, and varied only the canvas identity: grid, light, depth, color, and edge geometry.
 
-## Next decision
+## Decision
 
-Shortlist two or three directions. The next pass should combine their strongest properties into one design and normalize exact header dimensions, typography, spacing, and canvas treatment before any interaction is introduced.
+Editorial White is the selected foundation. Brand primitives and visual styling are established before any component or interaction design begins.

@@ -9,11 +9,13 @@ This repository defines Thought Studio, an agent-native whiteboard. Read this fi
 3. `docs/VISION.md`
 4. `docs/PRODUCT_PRINCIPLES.md`
 5. `docs/PRD.md`
-6. The document relevant to the task
+6. `docs/design/WHITEBOARD_FOUNDATION.md` for experience or implementation work
+7. The document relevant to the task
 
 ## Non-negotiable product truths
 
 - The whiteboard is the product, not a feature attached to documents or chat.
+- In this repository, **whiteboard** means the blank spatial canvas and workspace; it does not imply that drawing or ink must dominate the initial product.
 - The default experience begins with an unstructured blank board.
 - Structure must be allowed to emerge from thought rather than being required beforehand.
 - Human and agent activity happens on the same shared spatial surface.
@@ -44,3 +46,5 @@ Prefer the canonical terms in `docs/GLOSSARY.md`. In particular:
 Define and validate the smallest experience that proves this loop:
 
 `blankness -> fragments -> connections -> system -> creation`
+
+The immediate design milestone is review of the static empty-canvas mockup in `docs/design/WHITEBOARD_FOUNDATION.md`. Do not design interactions or canvas objects until that direction is reviewed.

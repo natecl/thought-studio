@@ -23,8 +23,9 @@ Discovery and product definition. This repository is intentionally docs-first; i
 3. [Product principles](docs/PRODUCT_PRINCIPLES.md)
 4. [Product requirements](docs/PRD.md)
 5. [Core object model](docs/CORE_MODEL.md)
-6. [Agent experience](docs/AGENT_EXPERIENCE.md)
-7. [Initial roadmap](docs/ROADMAP.md)
+6. [Blank canvas mockup](docs/design/WHITEBOARD_FOUNDATION.md)
+7. [Agent experience](docs/AGENT_EXPERIENCE.md)
+8. [Initial roadmap](docs/ROADMAP.md)
 
 The documentation index is in [docs/README.md](docs/README.md).
 

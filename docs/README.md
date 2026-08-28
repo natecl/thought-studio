@@ -13,6 +13,7 @@ The documentation is organized from durable product intent to changeable executi
 
 - [PRD](PRD.md): initial product requirements and acceptance criteria.
 - [Core model](CORE_MODEL.md): conceptual objects and relationships.
+- [Experience design](design/README.md): the current empty-canvas visual exploration.
 - [Agent experience](AGENT_EXPERIENCE.md): how agents participate on the board.
 - [Roadmap](ROADMAP.md): staged validation and delivery plan.
 

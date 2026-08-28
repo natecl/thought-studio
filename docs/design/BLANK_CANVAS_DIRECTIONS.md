@@ -92,6 +92,6 @@ Editorial White remains the behavioral foundation for blankness and restraint. P
 
 ## Primary Play application
 
-![Primary Play blank canvas](mockups/blank-canvas-v6-primary-play-clean-red-lobe.png)
+![Primary Play blank canvas](mockups/blank-canvas-v8-primary-play-red-teardrop.png)
 
-This v6 mockup preserves the Editorial White center while applying the accepted Primary Play identity through typography, the Thought Bloom, the Chalk ground, and an almost invisible micro-dot field. The canvas perimeter stays empty. The logo lobes retain softly smudged painted edges, but their visual weight is balanced around clean negative space without an inward connector or central protrusion. Its exact styling rules are defined in [Visual identity foundation](BRAND_FOUNDATION.md).
+This v8 mockup preserves the Editorial White center while applying the accepted Primary Play identity through typography, the Thought Bloom, the Chalk ground, and an almost invisible micro-dot field. The canvas perimeter stays empty. The existing blue, green, and yellow marks remain unchanged; the red mark keeps its compact painted teardrop character while its inner edge stops before the center without a separate inward piece. Its exact styling rules are defined in [Visual identity foundation](BRAND_FOUNDATION.md).

@@ -110,7 +110,7 @@ Texture provides authorship in marks and illustrations. The canvas itself remain
 
 ## Applied blank canvas
 
-![Primary Play blank canvas](mockups/blank-canvas-v6-primary-play-clean-red-lobe.png)
+![Primary Play blank canvas](mockups/blank-canvas-v8-primary-play-red-teardrop.png)
 
 The blank board applies Primary Play without turning the workspace into a poster:
 

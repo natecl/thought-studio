@@ -25,8 +25,8 @@ Discovery and product definition. This repository is intentionally docs-first; i
 5. [Core object model](docs/CORE_MODEL.md)
 6. [Blank canvas foundation](docs/design/WHITEBOARD_FOUNDATION.md)
 7. [Ten modern blank canvas directions](docs/design/BLANK_CANVAS_DIRECTIONS.md)
-8. [Ten artistic brand directions](docs/design/ARTISTIC_BRAND_DIRECTIONS.md)
-9. [Archived first visual identity proposal](docs/design/BRAND_FOUNDATION.md)
+8. [Visual identity foundation](docs/design/BRAND_FOUNDATION.md)
+9. [Ten artistic brand directions](docs/design/ARTISTIC_BRAND_DIRECTIONS.md)
 10. [Agent experience](docs/AGENT_EXPERIENCE.md)
 11. [Initial roadmap](docs/ROADMAP.md)
 

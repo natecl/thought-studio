@@ -1,0 +1,59 @@
+{
+  "version": "0.1.0",
+  "direction": "editorial-spatialism",
+  "color": {
+    "canvas": "#FCFCFB",
+    "surface": "#FFFFFF",
+    "ink": "#171717",
+    "graphite": "#626662",
+    "rule": "#E6E8E5",
+    "grid": "#EDF0F5",
+    "signal": "#3B6EFF",
+    "signalSoft": "#E9EEFF"
+  },
+  "font": {
+    "sans": "Geist Sans, Inter, ui-sans-serif, system-ui, sans-serif",
+    "mono": "Geist Mono, ui-monospace, SFMono-Regular, monospace"
+  },
+  "type": {
+    "display": { "fontSize": 64, "lineHeight": 64, "fontWeight": 600 },
+    "heading1": { "fontSize": 40, "lineHeight": 44, "fontWeight": 600 },
+    "heading2": { "fontSize": 28, "lineHeight": 34, "fontWeight": 600 },
+    "title": { "fontSize": 18, "lineHeight": 24, "fontWeight": 600 },
+    "body": { "fontSize": 15, "lineHeight": 23, "fontWeight": 400 },
+    "label": { "fontSize": 12, "lineHeight": 16, "fontWeight": 500 },
+    "metadata": { "fontSize": 11, "lineHeight": 16, "fontWeight": 400 }
+  },
+  "space": {
+    "unit": 8,
+    "rhythm": 24,
+    "field": 96
+  },
+  "canvas": {
+    "microDotDiameter": 1,
+    "microDotInterval": 24,
+    "majorReferenceInterval": 96,
+    "microDotOpacityMin": 0.55,
+    "microDotOpacityMax": 0.7
+  },
+  "radius": {
+    "surface": 12,
+    "floating": 16
+  },
+  "border": {
+    "width": 1,
+    "color": "{color.rule}"
+  },
+  "shadow": {
+    "lift": "0 1px 2px rgb(23 23 23 / 0.04), 0 8px 24px rgb(23 23 23 / 0.03)"
+  },
+  "icon": {
+    "strokeWidth": 1.5,
+    "sizes": [16, 20, 24]
+  },
+  "motion": {
+    "defaultDurationMs": 160,
+    "spatialDurationMs": 220,
+    "easing": "cubic-bezier(0.2, 0.8, 0.2, 1)"
+  }
+}

@@ -1,6 +1,6 @@
 # Artistic brand directions
 
-- **Status:** Comparative exploration v1
+- **Status:** Direction 03 selected
 - **Date:** 2026-08-28
 - **Scope:** Brand world, palette, typography, mark, illustration, texture, and spatial character
 
@@ -52,6 +52,8 @@ Soft serif typography, earthy color, halftone, pencil, and communal scenes. Warm
 
 Expressive grotesk typography, cut-paper primary color, and abstract human forms. The clearest high-energy direction.
 
+**Selected as the Thought Studio brand foundation.** The canonical system and its blank-canvas application are defined in [Visual identity foundation](BRAND_FOUNDATION.md).
+
 ![Primary Play](brand/explorations/artistic-brand-v1-03-primary-play.png)
 
 ## 04 — Bookish Workshop
@@ -100,16 +102,6 @@ Poetic serif typography, ordinary physical objects, soft daylight, cut paper, an
 
 The boards were generated with the built-in ImageGen tool. Every prompt used the same required anatomy and product principles while assigning a distinct type pairing, six-color palette, mark idea, illustration grammar, material language, and spatial behavior. The supplied references were used as mood and craft references only; no reference brand, logo, or character system is intended to be copied.
 
-## Next decision
+## Selection outcome
 
-Choose individual ingredients rather than forcing a single-board winner. Record reactions in this form:
-
-- **Marks:**
-- **Typography:**
-- **Palettes:**
-- **Illustration:**
-- **Texture and material:**
-- **Spatial composition:**
-- **Definite rejects:**
-
-The next synthesis should contain only selected ingredients and should remain a brand board—not a UI component exploration.
+Primary Play is selected as the base system and palette. Its final brand foundation preserves the direction's expressive typography, primary color family, handmade material language, and open-center composition while constraining their use inside the product.

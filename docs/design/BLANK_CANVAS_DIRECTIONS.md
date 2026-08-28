@@ -88,4 +88,10 @@ These mockups were generated with the built-in ImageGen tool. The common prompt 
 
 ## Decision
 
-Editorial White remains the selected blank-canvas direction. Brand primitives and visual styling must be selected from the artistic exploration before any component or interaction design begins.
+Editorial White remains the behavioral foundation for blankness and restraint. Primary Play is the selected brand system layered onto it.
+
+## Primary Play application
+
+![Primary Play blank canvas](mockups/blank-canvas-v3-primary-play.png)
+
+This v3 mockup preserves the Editorial White center while applying the accepted Primary Play identity through typography, the Thought Bloom, the Chalk ground, and four tiny edge gestures. Its exact styling rules are defined in [Visual identity foundation](BRAND_FOUNDATION.md).

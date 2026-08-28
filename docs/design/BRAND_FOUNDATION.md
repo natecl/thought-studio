@@ -19,14 +19,14 @@ Machine-readable foundation values are maintained in [`brand/tokens.json`](brand
 
 ## Identity mark: Thought Bloom
 
-The mark is a four-lobed, hand-painted bloom made from Studio Blue, Vermilion, Leaf, and Sun with one small black gesture.
+The mark is a four-lobed, hand-painted bloom made from Studio Blue, Vermilion, Leaf, and Sun. The four petals gather around a clean open center.
 
 It represents different perspectives gathering around an open center.
 
 ### Mark rules
 
 - Preserve the four-color balance and visible handmade edge.
-- Keep the black gesture small; it adds authorship rather than becoming a letterform.
+- Keep the center open: do not add an inward line, notch, stem, or connector to any petal.
 - Use a one-color black version when reproduction requires it.
 - Minimum digital size: 18 px.
 - Do not add gradients, faces, dimensional effects, or additional lobes.
@@ -109,13 +109,13 @@ Texture provides authorship in marks and illustrations. The canvas itself remain
 
 ## Applied blank canvas
 
-![Primary Play blank canvas](mockups/blank-canvas-v3-primary-play.png)
+![Primary Play blank canvas](mockups/blank-canvas-v4-primary-play-clean.png)
 
 The blank board applies Primary Play without turning the workspace into a poster:
 
 - Chalk occupies at least 96% of the empty view.
 - The Thought Bloom and expressive wordmark carry the identity.
-- Tiny colored calibration gestures establish spatial character at the extreme edges.
+- The canvas perimeter remains completely clear so the empty workspace feels calm and intentional.
 - The micro-dot field nearly disappears through the central thinking area.
 - No tools, prompts, content, collaborators, or agents appear before the user acts.
 

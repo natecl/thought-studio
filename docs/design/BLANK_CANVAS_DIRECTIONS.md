@@ -92,6 +92,6 @@ Editorial White remains the behavioral foundation for blankness and restraint. P
 
 ## Primary Play application
 
-![Primary Play blank canvas](mockups/blank-canvas-v3-primary-play.png)
+![Primary Play blank canvas](mockups/blank-canvas-v4-primary-play-clean.png)
 
-This v3 mockup preserves the Editorial White center while applying the accepted Primary Play identity through typography, the Thought Bloom, the Chalk ground, and four tiny edge gestures. Its exact styling rules are defined in [Visual identity foundation](BRAND_FOUNDATION.md).
+This v4 mockup preserves the Editorial White center while applying the accepted Primary Play identity through typography, the Thought Bloom, the Chalk ground, and an almost invisible micro-dot field. The canvas perimeter stays empty, and the four logo petals meet around clean negative space without an inward connector. Its exact styling rules are defined in [Visual identity foundation](BRAND_FOUNDATION.md).

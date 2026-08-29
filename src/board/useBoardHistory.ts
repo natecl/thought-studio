@@ -115,7 +115,12 @@ export function useBoardHistory(boardId: string) {
   }));
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(state.present));
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(state.present));
+    } catch {
+      // Local persistence is intentionally bounded in this prototype. A later
+      // storage decision will move binary Source payloads out of localStorage.
+    }
   }, [state.present, storageKey]);
 
   const commit = useCallback((next: BoardItem[]) => dispatch({ type: "commit", next }), []);

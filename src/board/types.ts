@@ -16,6 +16,8 @@ export interface BoardObject extends BoardEntityBase {
   sourceTitle?: string;
   sourceOrigin?: string;
   sourceUrl?: string;
+  sourceKind?: BoardSourceKind;
+  sourceFileName?: string;
 }
 
 export interface BoardSource extends BoardEntityBase {

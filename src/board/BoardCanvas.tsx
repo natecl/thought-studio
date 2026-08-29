@@ -4,13 +4,22 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ChangeEvent,
+  type DragEvent as ReactDragEvent,
   type FormEvent,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { BoardToolbar, type CanvasTool } from "./BoardToolbar";
 import { connectionPath } from "./connection";
-import { createUrlSource as buildUrlSource, formatSourceDate, parseSourceUrl, sourceInitial } from "./source";
+import {
+  createFileSource as buildFileSource,
+  createUrlSource as buildUrlSource,
+  formatFileSize,
+  formatSourceDate,
+  parseSourceUrl,
+  sourceInitial,
+} from "./source";
 import { useBoardHistory } from "./useBoardHistory";
 import type { BoardConnection, BoardFrame, BoardItem, BoardObject, BoardObjectType, BoardSource, Camera } from "./types";
 
@@ -131,6 +140,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const selectionGestureRef = useRef<SelectionGesture | null>(null);
   const framePlacementRef = useRef<FramePlacementGesture | null>(null);
   const frameResizeRef = useRef<FrameResizeGesture | null>(null);
+  const sourceFileInputRef = useRef<HTMLInputElement>(null);
   const lastPointerWorldRef = useRef<Point | null>(null);
   const { items, commit, replace, checkpoint, undo, redo, canUndo, canRedo } = useBoardHistory(boardId);
   const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA);
@@ -142,6 +152,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const [draftText, setDraftText] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [sourceComposer, setSourceComposer] = useState<SourceComposerState | null>(null);
+  const [isFileDragging, setIsFileDragging] = useState(false);
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
@@ -238,6 +249,31 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     return true;
   }, [commit, items]);
 
+  const addFileSources = useCallback(async (files: File[], point: Point) => {
+    if (files.length === 0) return false;
+    try {
+      const sources = await Promise.all(files.map((file, index) =>
+        buildFileSource(file, point.x + index * 28, point.y + index * 28),
+      ));
+      commit([...items, ...sources]);
+      setSelectedIds(new Set(sources.map((source) => source.id)));
+      setEditingId(null);
+      setContextMenu(null);
+      setSourceComposer(null);
+      setActiveTool("select");
+      const imageCount = sources.filter((source) => source.sourceKind === "image").length;
+      setAnnouncement(sources.length === 1
+        ? `${sources[0].sourceKind === "image" ? "Image" : "File"} Source added`
+        : `${sources.length} Sources added${imageCount ? `, including ${imageCount} ${imageCount === 1 ? "image" : "images"}` : ""}`);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "That file could not be added.";
+      if (sourceComposer) setSourceComposer({ ...sourceComposer, error: message });
+      setAnnouncement(message);
+      return false;
+    }
+  }, [commit, items, sourceComposer]);
+
   const createSourceFragment = useCallback((source: BoardSource, kind: "note" | "quote") => {
     const id = crypto.randomUUID();
     const existingFragmentCount = items.filter((item) => item.type === "note" && item.sourceId === source.id).length;
@@ -252,6 +288,8 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       sourceTitle: source.text,
       sourceOrigin: source.origin,
       sourceUrl: source.url,
+      sourceKind: source.sourceKind,
+      sourceFileName: source.fileName,
     };
     commit([...items, note]);
     setSelectedIds(new Set([id]));
@@ -281,6 +319,27 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     if (!addUrlSource(sourceComposer.value, sourceComposer.point)) {
       setSourceComposer({ ...sourceComposer, error: "Enter a valid http or https URL." });
     }
+  };
+
+  const chooseSourceFiles = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    const point = sourceComposer?.point ?? viewportCenterWorld();
+    void addFileSources(files, point);
+    event.target.value = "";
+  };
+
+  const handleFileDragOver = (event: ReactDragEvent<HTMLElement>) => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setIsFileDragging(true);
+  };
+
+  const handleFileDrop = (event: ReactDragEvent<HTMLElement>) => {
+    if (!event.dataTransfer.files.length) return;
+    event.preventDefault();
+    setIsFileDragging(false);
+    void addFileSources(Array.from(event.dataTransfer.files), screenToWorld(event.clientX, event.clientY));
   };
 
   const createEmptyFrameAt = useCallback((point: Point) => {
@@ -932,7 +991,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   return (
     <section
       ref={viewportRef}
-      className={`board-viewport is-${activeTool}-tool${spacePressed ? " is-space-ready" : ""}${isPanning ? " is-panning" : ""}`}
+      className={`board-viewport is-${activeTool}-tool${spacePressed ? " is-space-ready" : ""}${isPanning ? " is-panning" : ""}${isFileDragging ? " is-file-dragging" : ""}`}
       aria-label={`${title} canvas`}
       tabIndex={0}
       onWheel={handleWheel}
@@ -940,6 +999,12 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       onPointerMove={handleViewportPointerMove}
       onPointerUp={finishViewportGesture}
       onPointerCancel={finishViewportGesture}
+      onDragEnter={handleFileDragOver}
+      onDragOver={handleFileDragOver}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsFileDragging(false);
+      }}
+      onDrop={handleFileDrop}
       onDoubleClick={(event) => {
         const target = event.target as Element;
         if (target.closest("[data-board-item], .board-toolbar, .multi-selection-toolbar") || activeTool !== "select") return;
@@ -948,6 +1013,13 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       onContextMenu={handleContextMenu}
     >
       <div className="canvas-field" aria-hidden="true" style={{ backgroundPosition: `${camera.x + 1}px ${camera.y + 1}px`, backgroundSize: `${24 * camera.scale}px ${24 * camera.scale}px` }} />
+      {isFileDragging && (
+        <div className="file-drop-surface" aria-hidden="true">
+          <span className="file-drop-mark" />
+          <strong>Drop into the Board</strong>
+          <span>Images and files become Sources with provenance.</span>
+        </div>
+      )}
       <div className="canvas-world" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
         <svg className="connection-layer" role="group" aria-label="Board Connections">
           {items.filter((item): item is BoardConnection => item.type === "connection").map((connection) => {
@@ -1115,7 +1187,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
             <span className="source-composer-mark" aria-hidden="true" />
             <div>
               <strong>Bring in a source</strong>
-              <span>Its original link stays attached.</span>
+              <span>Its origin stays attached.</span>
             </div>
           </div>
           <label htmlFor="source-url-input">Web address</label>
@@ -1132,12 +1204,27 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
           {sourceComposer.error
             ? <span className="source-composer-error" id="source-url-error" role="alert">{sourceComposer.error}</span>
             : <span className="source-composer-hint" id="source-url-hint">Tip: paste a URL anywhere on the Board.</span>}
+          <div className="source-composer-divider"><span>or</span></div>
+          <button className="source-file-button" type="button" onClick={() => sourceFileInputRef.current?.click()}>
+            <span className="source-file-button-mark" aria-hidden="true">+</span>
+            Choose an image or file
+          </button>
+          <span className="source-composer-hint">Files stay attached to this local Board prototype. Maximum 1.5 MB each.</span>
           <div className="source-composer-actions">
             <button type="button" onClick={() => setSourceComposer(null)}>Cancel</button>
             <button className="is-primary" type="submit">Add to Board</button>
           </div>
         </form>
       )}
+
+      <input
+        ref={sourceFileInputRef}
+        className="source-file-input"
+        type="file"
+        multiple
+        aria-label="Choose images or files to add as Sources"
+        onChange={chooseSourceFiles}
+      />
 
       <BoardToolbar
         activeTool={activeTool}
@@ -1186,8 +1273,14 @@ function SourceCard({
   selected: boolean;
   onCreateFragment: (source: BoardSource, kind: "note" | "quote") => void;
 }) {
+  const isUrl = source.sourceKind === "url";
+  const isImage = source.sourceKind === "image";
+  const sourceLabel = isUrl ? "Source" : isImage ? "Image source" : "File source";
+  const fileDetail = source.mimeType && source.mimeType !== "application/octet-stream"
+    ? `${formatFileSize(source.fileSize)} · ${source.mimeType.replace(/^application\//, "")}`
+    : formatFileSize(source.fileSize);
   return (
-    <article className="source-surface">
+    <article className={`source-surface is-${source.sourceKind}`}>
       {selected && (
         <div className="source-fragment-toolbar" role="toolbar" aria-label="Create from Source" onPointerDown={(event) => event.stopPropagation()}>
           <span>Keep context</span>
@@ -1197,31 +1290,54 @@ function SourceCard({
       )}
       <header className="source-kicker">
         <span className="source-kicker-mark" aria-hidden="true" />
-        <span>Source</span>
+        <span>{sourceLabel}</span>
         <time dateTime={source.importedAt} title={`Imported ${new Date(source.importedAt).toLocaleString()}`}>
           {formatSourceDate(source.importedAt)}
         </time>
       </header>
-      <div className="source-preview">
-        <span className="source-origin-mark" aria-hidden="true">{sourceInitial(source.origin)}</span>
-        <div className="source-preview-copy">
-          <strong>{source.text}</strong>
-          <span>{source.origin}</span>
+      {isImage && source.previewDataUrl ? (
+        <div className="source-image-preview">
+          <img src={source.previewDataUrl} alt="" draggable={false} />
+          <div className="source-preview-copy">
+            <strong>{source.text}</strong>
+            <span>{fileDetail}</span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="source-preview">
+          <span className={`source-origin-mark${isUrl ? "" : " is-file"}`} aria-hidden="true">
+            {isUrl ? sourceInitial(source.origin) : <FileSourceGlyph />}
+          </span>
+          <div className="source-preview-copy">
+            <strong>{source.text}</strong>
+            <span>{isUrl ? source.origin : fileDetail}</span>
+          </div>
+        </div>
+      )}
       <footer className="source-footer">
-        <span className="source-provenance">Original link retained</span>
+        <span className="source-provenance">{isUrl ? "Original link retained" : "Original file attached"}</span>
         <a
           href={source.url}
           target="_blank"
           rel="noreferrer"
+          download={isUrl ? undefined : source.fileName}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
-          Open <span aria-hidden="true">↗</span>
+          {isUrl ? "Open" : isImage ? "View" : "Download"} <span aria-hidden="true">{isUrl ? "↗" : "↓"}</span>
         </a>
       </footer>
     </article>
+  );
+}
+
+function FileSourceGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 3.5h6.5L18 8v12.5H7z" />
+      <path d="M13.5 3.5V8H18" />
+      <path d="M9.5 12h6M9.5 15h5" />
+    </svg>
   );
 }
 
@@ -1246,8 +1362,15 @@ function SourceLineageFooter({
         <span className="note-lineage-origin">from {origin}</span>
       )}
       {note.sourceUrl && (
-        <a href={note.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open original Source from ${origin}`} onClick={(event) => event.stopPropagation()}>
-          ↗
+        <a
+          href={note.sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          download={note.sourceKind && note.sourceKind !== "url" ? note.sourceFileName : undefined}
+          aria-label={`${note.sourceKind && note.sourceKind !== "url" ? "Download" : "Open"} original Source from ${origin}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {note.sourceKind && note.sourceKind !== "url" ? "↓" : "↗"}
         </a>
       )}
     </footer>

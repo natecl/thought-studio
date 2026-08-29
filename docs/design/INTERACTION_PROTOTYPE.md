@@ -1,6 +1,6 @@
 # Interaction prototype foundation
 
-- **Status:** Milestone 4C implemented
+- **Status:** Milestone 4D implemented
 - **Date:** 2026-08-29
 - **Initial input priority:** Desktop pointer and keyboard
 
@@ -20,6 +20,7 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 | Add text | Double-click; right-click → Add text | `T` |
 | Add note | Right-click → Add note | `N` |
 | Add URL Source | Paste a URL anywhere; Add Source in the tool dock or right-click menu | Command/Control-V |
+| Add image or file Source | Drop files on the Board; Add Source → Choose an image or file | — |
 | Add an empty Frame | Choose Frame, then drag a crop-like boundary; right-click → Add Frame uses a default size | `F`, then drag |
 | Select one | Click an Object | Tab to an Object |
 | Toggle selection | Shift-click an Object | — |
@@ -46,6 +47,8 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - The tool dock contains no unavailable or speculative tools.
 - Text and notes use the same underlying Board coordinate system and remain stable while panning or zooming.
 - A URL can enter directly as a first-class Source with its normalized link, origin, import time, and a useful local preview. No external metadata service is required by this prototype slice.
+- Images and files enter through the same Source model by dropping them onto the Board or choosing them from Add Source. Image Sources retain a visible preview; file Sources retain their name, media type, size, and original payload.
+- This local prototype caps each embedded file at 1.5 MB and stores its payload in browser persistence. That is a temporary prototype boundary, not a storage architecture decision.
 - Sources participate in selection, movement, framing, duplication, deletion, undo, and local persistence using the same Board entity model as manually authored material.
 - A Connection begins as an intentionally non-semantic visual relationship between two selected Board entities. It follows both endpoints, can be selected directly, and becomes Studio Blue only when selected.
 - Connections persist, duplicate with both endpoints, delete with a removed endpoint, and participate in meaningful undo and redo operations.
@@ -70,10 +73,9 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Rotation handles
 - Ink and erasing
 - Shapes and semantic Connection labels
-- Image and file Sources
 - Automatic extraction, transcription, and quotation detection
 - Server persistence and synchronization
 - Multiplayer presence
 - Agent selection and proposal workflows
 
-The next milestone should extend the universal Source model to images and files while preserving the same spatial behavior and provenance contract.
+The next milestone should make a bounded lasso selection available to an agent as an explicit, visible, and reversible proposal workflow without selecting an intelligence provider or backend architecture.

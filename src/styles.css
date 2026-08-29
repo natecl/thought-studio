@@ -1469,6 +1469,46 @@ button {
   transform: rotate(-2deg);
 }
 
+.source-origin-mark.is-file {
+  color: var(--black);
+  background: var(--sun);
+  transform: rotate(1deg);
+}
+
+.source-origin-mark svg {
+  width: 23px;
+  height: 23px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.45;
+}
+
+.source-image-preview {
+  display: flex;
+  min-width: 0;
+  margin-top: 13px;
+  flex: 1;
+  flex-direction: column;
+}
+
+.source-image-preview img {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  max-height: 138px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 10px 8px 11px 9px;
+  background: #fff;
+  object-fit: cover;
+}
+
+.source-image-preview .source-preview-copy {
+  margin-top: 9px;
+}
+
 .source-preview-copy {
   display: flex;
   min-width: 0;
@@ -1662,6 +1702,114 @@ button {
   justify-content: flex-end;
   gap: 7px;
   margin-top: 11px;
+}
+
+.source-composer-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  margin: 4px 0;
+  color: rgba(17, 17, 17, 0.42);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.source-composer-divider::before,
+.source-composer-divider::after {
+  height: 1px;
+  background: rgba(17, 17, 17, 0.1);
+  content: "";
+  flex: 1;
+}
+
+.source-composer-divider span {
+  padding: 0 9px;
+}
+
+.source-file-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  color: var(--black);
+  border: 1px solid rgba(17, 17, 17, 0.17);
+  border-radius: 9px;
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.source-file-button:hover,
+.source-file-button:focus-visible {
+  border-color: var(--studio-blue);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(63, 110, 219, 0.1);
+}
+
+.source-file-button-mark {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--chalk);
+  border-radius: 58% 42% 55% 45%;
+  background: var(--studio-blue);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
+  transform: rotate(-4deg);
+}
+
+.source-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.file-drop-surface {
+  position: absolute;
+  inset: 20px;
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--black);
+  border: 2px dashed rgba(63, 110, 219, 0.58);
+  border-radius: 22px 18px 24px 19px;
+  background: var(--chalk);
+  pointer-events: none;
+  flex-direction: column;
+}
+
+.file-drop-mark {
+  width: 34px;
+  height: 31px;
+  margin-bottom: 12px;
+  border-radius: 58% 42% 53% 47%;
+  background: var(--studio-blue);
+  transform: rotate(-3deg);
+}
+
+.file-drop-surface strong {
+  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 21px;
+  font-variation-settings: "wght" 650;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.file-drop-surface > span:last-child {
+  margin-top: 4px;
+  color: rgba(17, 17, 17, 0.54);
+  font-size: 13px;
 }
 
 .source-composer-actions button {

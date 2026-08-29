@@ -52,6 +52,7 @@ npm run typecheck
 - Pan and zoom across a shared Board coordinate system
 - Contextual text and note creation
 - Universal URL Sources through paste or manual entry, with retained origin and import provenance
+- Image and file Sources through drag-and-drop or file choice, with attached browser-local originals
 - Simple visual Connections between selected Board entities that follow their endpoints
 - Source-linked notes and quotations with durable origin snapshots and on-Board Source location
 - Single and multi-selection with Shift-click, marquee, and freeform lasso
@@ -60,7 +61,7 @@ npm run typecheck
 - Undo and redo for meaningful Object operations
 - Local Board-item persistence across reloads
 
-See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. Image and file Sources plus bounded agent participation are the next interaction milestones. The approved mockup is a visual reference; the coded interface is the product implementation.
+See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. Bounded agent participation is the next interaction milestone. The approved mockup is a visual reference; the coded interface is the product implementation.
 
 ## Start here
 

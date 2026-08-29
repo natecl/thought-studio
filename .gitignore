@@ -10,3 +10,4 @@ coverage/
 .turbo/
 *.log
 *.tsbuildinfo
+.thought-studio/

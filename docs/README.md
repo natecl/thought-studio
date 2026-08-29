@@ -22,6 +22,8 @@ The documentation is organized from durable product intent to changeable executi
 
 - [Ivan Zhao interview notes](references/IVAN_ZHAO_NOTES.md): source principles that informed the product philosophy.
 - [ADR 0001: The whiteboard is the product](decisions/0001-whiteboard-is-the-product.md): the foundational product decision.
+- [ADR 0002: Frames are first-class context boundaries](decisions/0002-frames-are-context-boundaries.md): the shared visual and machine-readable scope decision.
+- [ADR 0003: One canonical Board service with agent-facing adapters](decisions/0003-canonical-board-service-and-agent-adapters.md): the operation, repository, CLI, and future MCP boundary.
 
 ## Document authority
 

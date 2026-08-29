@@ -12,7 +12,7 @@ import { BoardToolbar, type CanvasTool } from "./BoardToolbar";
 import { connectionPath } from "./connection";
 import { createUrlSource as buildUrlSource, formatSourceDate, parseSourceUrl, sourceInitial } from "./source";
 import { useBoardHistory } from "./useBoardHistory";
-import type { BoardConnection, BoardFrame, BoardItem, BoardObjectType, BoardSource, Camera } from "./types";
+import type { BoardConnection, BoardFrame, BoardItem, BoardObject, BoardObjectType, BoardSource, Camera } from "./types";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
@@ -238,6 +238,37 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     return true;
   }, [commit, items]);
 
+  const createSourceFragment = useCallback((source: BoardSource, kind: "note" | "quote") => {
+    const id = crypto.randomUUID();
+    const existingFragmentCount = items.filter((item) => item.type === "note" && item.sourceId === source.id).length;
+    const note: BoardItem = {
+      id,
+      type: "note",
+      x: source.x + source.width + 36,
+      y: source.y + existingFragmentCount * 184,
+      text: "",
+      sourceId: source.id,
+      sourceLinkKind: kind,
+      sourceTitle: source.text,
+      sourceOrigin: source.origin,
+      sourceUrl: source.url,
+    };
+    commit([...items, note]);
+    setSelectedIds(new Set([id]));
+    setEditingId(id);
+    setDraftText("");
+    setAnnouncement(kind === "quote" ? "Source-linked quotation added" : "Source-linked note added");
+  }, [commit, items]);
+
+  const locateSource = useCallback((sourceId: string) => {
+    const source = items.find((item): item is BoardSource => item.id === sourceId && item.type === "source");
+    if (!source) return false;
+    setSelectedIds(new Set([source.id]));
+    setEditingId(null);
+    setAnnouncement(`Source from ${source.origin} selected`);
+    return true;
+  }, [items]);
+
   const openSourceComposer = useCallback((point = viewportCenterWorld()) => {
     setContextMenu(null);
     setSourceComposer({ point, value: "", error: "" });
@@ -444,6 +475,15 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
           id: idMap.get(item.id)!,
           fromId: idMap.get(item.fromId) ?? item.fromId,
           toId: idMap.get(item.toId) ?? item.toId,
+        };
+      }
+      if (item.type === "note") {
+        return {
+          ...item,
+          id: idMap.get(item.id)!,
+          x: item.x + 24,
+          y: item.y + 24,
+          sourceId: item.sourceId ? idMap.get(item.sourceId) ?? item.sourceId : undefined,
         };
       }
       return { ...item, id: idMap.get(item.id)!, x: item.x + 24, y: item.y + 24 };
@@ -943,7 +983,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
               key={item.id}
               data-board-item
               data-board-item-id={item.id}
-              className={`board-object ${item.type}-object${selected ? " is-selected" : ""}${editing ? " is-editing" : ""}`}
+              className={`board-object ${item.type}-object${item.type === "note" && item.sourceId ? " has-source" : ""}${item.type === "note" && item.sourceLinkKind === "quote" ? " is-quote" : ""}${selected ? " is-selected" : ""}${editing ? " is-editing" : ""}`}
               style={{
                 transform: `translate(${item.x}px, ${item.y}px)`,
                 ...(item.type === "frame" || item.type === "source" ? { width: item.width, height: item.height } : {}),
@@ -1007,14 +1047,16 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                   )}
                 </>
               ) : item.type === "source" ? (
-                <SourceCard source={item} />
+                <SourceCard source={item} selected={selected && selectedIds.size === 1} onCreateFragment={createSourceFragment} />
               ) : editing ? (
                 <textarea
                   data-editor-id={item.id}
                   className="object-editor"
                   value={draftText}
                   aria-label={`Edit ${item.type}`}
-                  placeholder={item.type === "note" ? "Write a note…" : "Start typing…"}
+                  placeholder={item.type === "note"
+                    ? item.sourceLinkKind === "quote" ? "Paste or write the quotation…" : item.sourceId ? "Write a note from this source…" : "Write a note…"
+                    : "Start typing…"}
                   onChange={(event) => setDraftText(event.target.value)}
                   onBlur={finishEditing}
                   onKeyDown={(event) => {
@@ -1023,6 +1065,9 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                   }}
                 />
               ) : <div className="object-surface">{item.text}</div>}
+              {item.type === "note" && item.sourceId && (
+                <SourceLineageFooter note={item} sourceExists={items.some((candidate) => candidate.id === item.sourceId && candidate.type === "source")} onLocateSource={locateSource} />
+              )}
             </div>
           );
         })}
@@ -1132,9 +1177,24 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   );
 }
 
-function SourceCard({ source }: { source: BoardSource }) {
+function SourceCard({
+  source,
+  selected,
+  onCreateFragment,
+}: {
+  source: BoardSource;
+  selected: boolean;
+  onCreateFragment: (source: BoardSource, kind: "note" | "quote") => void;
+}) {
   return (
     <article className="source-surface">
+      {selected && (
+        <div className="source-fragment-toolbar" role="toolbar" aria-label="Create from Source" onPointerDown={(event) => event.stopPropagation()}>
+          <span>Keep context</span>
+          <button type="button" onClick={(event) => { event.stopPropagation(); onCreateFragment(source, "note"); }}>Note</button>
+          <button type="button" onClick={(event) => { event.stopPropagation(); onCreateFragment(source, "quote"); }}>Quote</button>
+        </div>
+      )}
       <header className="source-kicker">
         <span className="source-kicker-mark" aria-hidden="true" />
         <span>Source</span>
@@ -1162,5 +1222,34 @@ function SourceCard({ source }: { source: BoardSource }) {
         </a>
       </footer>
     </article>
+  );
+}
+
+function SourceLineageFooter({
+  note,
+  sourceExists,
+  onLocateSource,
+}: {
+  note: BoardObject;
+  sourceExists: boolean;
+  onLocateSource: (sourceId: string) => boolean;
+}) {
+  const origin = note.sourceOrigin || note.sourceTitle || "Source";
+  return (
+    <footer className="note-lineage" onPointerDown={(event) => event.stopPropagation()}>
+      <span className="note-lineage-kind">{note.sourceLinkKind === "quote" ? "Quote" : "Note"}</span>
+      {sourceExists && note.sourceId ? (
+        <button type="button" title={`Locate ${note.sourceTitle || "Source"}`} onClick={() => onLocateSource(note.sourceId!)}>
+          from {origin}
+        </button>
+      ) : (
+        <span className="note-lineage-origin">from {origin}</span>
+      )}
+      {note.sourceUrl && (
+        <a href={note.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open original Source from ${origin}`} onClick={(event) => event.stopPropagation()}>
+          ↗
+        </a>
+      )}
+    </footer>
   );
 }

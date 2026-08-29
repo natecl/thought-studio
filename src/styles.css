@@ -1330,12 +1330,83 @@ button {
   color: rgba(17, 17, 17, 0.4);
 }
 
+.note-object.has-source .object-surface,
+.note-object.has-source .object-editor {
+  padding-bottom: 50px;
+}
+
+.note-object.is-quote .object-surface,
+.note-object.is-quote .object-editor {
+  border-top-color: var(--vermilion);
+}
+
+.note-lineage {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(17, 17, 17, 0.1);
+  color: rgba(17, 17, 17, 0.5);
+  font-size: 10.5px;
+  line-height: 1;
+}
+
+.note-lineage-kind {
+  color: var(--studio-blue);
+  font-weight: 700;
+}
+
+.note-object.is-quote .note-lineage-kind {
+  color: var(--vermilion);
+}
+
+.note-lineage button,
+.note-lineage a {
+  padding: 0;
+  color: rgba(17, 17, 17, 0.58);
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  text-decoration: none;
+}
+
+.note-lineage button {
+  min-width: 0;
+  overflow: hidden;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-lineage a {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.note-lineage button:hover,
+.note-lineage button:focus-visible,
+.note-lineage a:hover,
+.note-lineage a:focus-visible {
+  color: var(--studio-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .source-surface {
+  position: relative;
   display: flex;
   width: 100%;
   height: 100%;
   padding: 15px 17px 14px;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(17, 17, 17, 0.15);
   border-top: 4px solid var(--studio-blue);
   border-radius: 15px 13px 16px 12px;
@@ -1454,6 +1525,48 @@ button {
   outline: none;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.source-fragment-toolbar {
+  position: absolute;
+  top: -48px;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 38px;
+  padding: 4px;
+  border: 1px solid rgba(17, 17, 17, 0.15);
+  border-radius: 11px;
+  background: var(--chalk);
+  box-shadow: 0 10px 28px rgb(17 17 17 / 0.09), 0 2px 5px rgb(17 17 17 / 0.05);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.source-fragment-toolbar span {
+  padding: 0 6px;
+  color: rgba(17, 17, 17, 0.5);
+  font-size: 11px;
+}
+
+.source-fragment-toolbar button {
+  height: 28px;
+  padding: 0 8px;
+  color: rgba(17, 17, 17, 0.8);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.source-fragment-toolbar button:hover,
+.source-fragment-toolbar button:focus-visible {
+  color: var(--black);
+  outline: none;
+  background: rgba(17, 17, 17, 0.055);
 }
 
 .source-composer {

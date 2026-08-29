@@ -11,6 +11,11 @@ interface BoardEntityBase {
 
 export interface BoardObject extends BoardEntityBase {
   type: BoardObjectType;
+  sourceId?: string;
+  sourceLinkKind?: "note" | "quote";
+  sourceTitle?: string;
+  sourceOrigin?: string;
+  sourceUrl?: string;
 }
 
 export interface BoardSource extends BoardEntityBase {

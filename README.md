@@ -41,6 +41,24 @@ Run the TypeScript compiler without producing output with:
 npm run typecheck
 ```
 
+Run the domain-service tests with:
+
+```bash
+npm test
+```
+
+### Agent-facing development CLI
+
+The first headless Board-service slice is available through a thin local CLI. It uses the same typed operations, permission checks, versions, idempotency, proposals, attribution, and activity history intended for the future API and MCP adapter.
+
+```bash
+npm run thought -- --help
+npm run thought -- boards create --title "Research map" --actor-type agent
+npm run thought -- boards list
+```
+
+CLI data defaults to `.thought-studio/boards.json`, which is a local development repository rather than a production persistence decision. The interactive canvas continues to use browser-local persistence until its repository migration slice.
+
 ### Current implementation milestone
 
 - Native full-viewport Chalk canvas with the accepted micro-dot field
@@ -61,6 +79,8 @@ npm run typecheck
 - First-class Frames with naming, explicit membership, collective movement, and duplication
 - Undo and redo for meaningful Object operations
 - Local Board-item persistence across reloads
+- Framework-independent TypeScript Board service with scoped permissions, optimistic versions, idempotency, proposals, and attributed activity history
+- Local CLI adapter for agent-created Boards, Board or Frame context inspection, and proposed-operation review
 
 See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. The first bounded agent proposal workflow is implemented without committing the product to an AI provider or backend architecture. The approved mockup is a visual reference; the coded interface is the product implementation.
 

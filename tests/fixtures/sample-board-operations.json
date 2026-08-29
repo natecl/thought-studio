@@ -1,0 +1,37 @@
+[
+  {
+    "operationId": "create-question-note",
+    "type": "object.create",
+    "object": {
+      "id": "question-note",
+      "type": "note",
+      "x": 120,
+      "y": 160,
+      "text": "What are we trying to understand?"
+    }
+  },
+  {
+    "operationId": "create-evidence-note",
+    "type": "object.create",
+    "object": {
+      "id": "evidence-note",
+      "type": "note",
+      "x": 460,
+      "y": 160,
+      "text": "What evidence do we already have?"
+    }
+  },
+  {
+    "operationId": "connect-question-to-evidence",
+    "type": "connection.create",
+    "connection": {
+      "id": "question-evidence-connection",
+      "type": "connection",
+      "x": 0,
+      "y": 0,
+      "text": "",
+      "fromId": "question-note",
+      "toId": "evidence-note"
+    }
+  }
+]

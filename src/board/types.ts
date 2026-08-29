@@ -1,6 +1,15 @@
 export type BoardObjectType = "text" | "note";
 export type BoardSourceKind = "url" | "image" | "file";
-export type BoardItemType = BoardObjectType | "source" | "connection" | "frame";
+export type BoardItemType = BoardObjectType | "source" | "connection" | "frame" | "proposal";
+
+export interface AgentSourceReference {
+  id: string;
+  title: string;
+  origin: string;
+  url: string;
+  sourceKind: BoardSourceKind;
+  fileName?: string;
+}
 
 interface BoardEntityBase {
   id: string;
@@ -18,6 +27,12 @@ export interface BoardObject extends BoardEntityBase {
   sourceUrl?: string;
   sourceKind?: BoardSourceKind;
   sourceFileName?: string;
+  authoredBy?: "agent";
+  authorName?: string;
+  proposalPrompt?: string;
+  agentScopeIds?: string[];
+  agentScopeLabels?: string[];
+  agentSources?: AgentSourceReference[];
 }
 
 export interface BoardSource extends BoardEntityBase {
@@ -47,7 +62,19 @@ export interface BoardFrame extends BoardEntityBase {
   childIds: string[];
 }
 
-export type BoardItem = BoardObject | BoardSource | BoardConnection | BoardFrame;
+export interface BoardProposal extends BoardEntityBase {
+  type: "proposal";
+  prompt: string;
+  agentName: string;
+  scopeIds: string[];
+  scopeLabels: string[];
+  sources: AgentSourceReference[];
+  createdAt: string;
+  width: number;
+  height: number;
+}
+
+export type BoardItem = BoardObject | BoardSource | BoardConnection | BoardFrame | BoardProposal;
 
 export interface Camera {
   x: number;

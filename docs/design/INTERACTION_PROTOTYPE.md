@@ -1,6 +1,6 @@
 # Interaction prototype foundation
 
-- **Status:** Milestone 4D implemented
+- **Status:** Milestone 4E implemented
 - **Date:** 2026-08-29
 - **Initial input priority:** Desktop pointer and keyboard
 
@@ -29,6 +29,7 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 | Select everything | — | Command/Control-A |
 | Connect two entities | Select exactly two Board entities, then choose Connect in the selection toolbar | — |
 | Create a Source fragment | Select a Source, then choose Note or Quote in its contextual toolbar | — |
+| Ask an agent about bounded context | Select two or more Board entities with marquee, lasso, or Shift-click; choose Ask agent | — |
 | Frame a selection | Select Objects, then choose Frame in the selection toolbar | `F` |
 | Move | Drag any selected Object to move the selection | Arrow keys; Shift-arrow moves 10 px |
 | Move a Frame | Drag the Frame boundary to move it and its contained Objects | Arrow keys; Shift-arrow moves 10 px |
@@ -55,6 +56,10 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Selecting a Source exposes quiet Note and Quote actions. The resulting fragment retains the live Source identity plus a durable title, origin, and URL snapshot.
 - Linked fragments can locate an existing Source on the Board. If that Source is removed, the fragment keeps its original provenance and external link rather than losing lineage.
 - Multiple fragments from one Source form a vertical trail beside it instead of overlapping.
+- A multi-selection can become explicit agent context through Ask agent. The request stays anchored to that visible selection rather than opening a generic chat sidebar.
+- Studio agent creates a persisted Draft Proposal beside the selected material. The Proposal names its scoped Object count and retained Source count without changing the original Board state.
+- Accepting a Proposal creates an attributed agent Note with a durable scope and Source snapshot. Rejecting removes the Proposal; both decisions are meaningful undoable operations.
+- The current response is a deterministic local workflow preview. It proves scope, proposal, attribution, provenance, review, and reversal mechanics without selecting an AI model, provider, or execution backend.
 - Object creation, editing, movement, and deletion are meaningful undoable operations.
 - Multi-selection has one shared boundary and one contextual toolbar while preserving each Object's individual identity.
 - Selected Objects move, nudge, duplicate, and delete as one reversible operation.
@@ -76,6 +81,7 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Automatic extraction, transcription, and quotation detection
 - Server persistence and synchronization
 - Multiplayer presence
-- Agent selection and proposal workflows
+- Live agent execution, streaming activity, and model/provider integration
+- Agent permissions, pause controls, roles, and multiplayer presence
 
-The next milestone should make a bounded lasso selection available to an agent as an explicit, visible, and reversible proposal workflow without selecting an intelligence provider or backend architecture.
+The next milestone should validate this stable Board-facing proposal contract with a real agent adapter while preserving visible scope, retained provenance, explicit review, and meaningful reversal.

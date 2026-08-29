@@ -21,7 +21,17 @@ import {
   sourceInitial,
 } from "./source";
 import { useBoardHistory } from "./useBoardHistory";
-import type { BoardConnection, BoardFrame, BoardItem, BoardObject, BoardObjectType, BoardSource, Camera } from "./types";
+import type {
+  AgentSourceReference,
+  BoardConnection,
+  BoardFrame,
+  BoardItem,
+  BoardObject,
+  BoardObjectType,
+  BoardProposal,
+  BoardSource,
+  Camera,
+} from "./types";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
@@ -31,11 +41,13 @@ const MIN_FRAME_SIZE = { width: 180, height: 120 };
 const FRAME_HORIZONTAL_PADDING = 30;
 const FRAME_TOP_PADDING = 48;
 const FRAME_BOTTOM_PADDING = 30;
+const DEFAULT_PROPOSAL_SIZE = { width: 314, height: 292 };
 
 interface Point { x: number; y: number }
 interface ScreenRect { left: number; top: number; right: number; bottom: number; width: number; height: number }
 interface ContextMenuState { screenX: number; screenY: number; worldX: number; worldY: number }
 interface SourceComposerState { point: Point; value: string; error: string }
+interface AgentComposerState { scopeIds: string[]; screenX: number; screenY: number; value: string; error: string }
 interface PanGesture { pointerId: number; startClientX: number; startClientY: number; startCamera: Camera }
 interface ItemDragGesture {
   ids: Set<string>;
@@ -86,6 +98,26 @@ function setsMatch(left: Set<string>, right: Set<string>) {
 
 function isConnectable(item: BoardItem) {
   return item.type !== "connection";
+}
+
+function itemLabel(item: BoardItem) {
+  const text = item.text.trim();
+  if (text) return text.length > 42 ? `${text.slice(0, 39)}…` : text;
+  if (item.type === "source") return item.fileName || item.origin;
+  if (item.type === "frame") return "Untitled frame";
+  if (item.type === "proposal") return "Draft proposal";
+  return item.type === "note" ? "Untitled note" : "Untitled text";
+}
+
+function sourceReference(source: BoardSource): AgentSourceReference {
+  return {
+    id: source.id,
+    title: source.text,
+    origin: source.origin,
+    url: source.url,
+    sourceKind: source.sourceKind,
+    fileName: source.fileName,
+  };
 }
 
 function rectangleFromPoints(start: Point, end: Point): ScreenRect {
@@ -152,6 +184,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const [draftText, setDraftText] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [sourceComposer, setSourceComposer] = useState<SourceComposerState | null>(null);
+  const [agentComposer, setAgentComposer] = useState<AgentComposerState | null>(null);
   const [isFileDragging, setIsFileDragging] = useState(false);
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePressed, setSpacePressed] = useState(false);
@@ -307,8 +340,120 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     return true;
   }, [items]);
 
+  const locateAgentScope = useCallback((scopeIds: string[]) => {
+    const existingIds = scopeIds.filter((id) => items.some((item) => item.id === id));
+    if (existingIds.length === 0) {
+      setAnnouncement("The original scoped Objects are no longer on this Board");
+      return false;
+    }
+    setSelectedIds(new Set(existingIds));
+    setEditingId(null);
+    setAnnouncement(`${existingIds.length} original scoped ${existingIds.length === 1 ? "Object" : "Objects"} selected`);
+    return true;
+  }, [items]);
+
+  const openAgentComposer = useCallback(() => {
+    if (!selectionBounds) return;
+    const scopeIds = [...selectedIds].filter((id) => items.some((item) => item.id === id && item.type !== "proposal"));
+    if (scopeIds.length === 0) return;
+    const viewportWidth = viewportRef.current?.clientWidth ?? 720;
+    const viewportHeight = viewportRef.current?.clientHeight ?? 640;
+    const screenX = Math.max(190, Math.min(viewportWidth - 190, selectionBounds.left + selectionBounds.width / 2));
+    const screenY = Math.max(82, Math.min(viewportHeight - 275, selectionBounds.bottom + 12));
+    setAgentComposer({ scopeIds, screenX, screenY, value: "", error: "" });
+    setSourceComposer(null);
+    setContextMenu(null);
+    setAnnouncement(`${scopeIds.length} ${scopeIds.length === 1 ? "Object" : "Objects"} scoped for Studio agent`);
+  }, [items, selectedIds, selectionBounds]);
+
+  const submitAgentAsk = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!agentComposer) return;
+    const prompt = agentComposer.value.trim();
+    if (!prompt) {
+      setAgentComposer({ ...agentComposer, error: "Tell the agent what to consider or make." });
+      return;
+    }
+    const scopeItems = agentComposer.scopeIds
+      .map((id) => items.find((item) => item.id === id))
+      .filter((item): item is BoardItem => Boolean(item));
+    if (scopeItems.length === 0) {
+      setAgentComposer({ ...agentComposer, error: "That Board scope is no longer available." });
+      return;
+    }
+    const references = new Map<string, AgentSourceReference>();
+    scopeItems.forEach((item) => {
+      if (item.type === "source") references.set(item.id, sourceReference(item));
+      if (item.type === "note") {
+        const liveSource = item.sourceId
+          ? items.find((candidate): candidate is BoardSource => candidate.id === item.sourceId && candidate.type === "source")
+          : undefined;
+        if (liveSource) references.set(liveSource.id, sourceReference(liveSource));
+        else if (item.sourceUrl) {
+          references.set(item.sourceId || item.sourceUrl, {
+            id: item.sourceId || item.sourceUrl,
+            title: item.sourceTitle || item.text || "Source",
+            origin: item.sourceOrigin || "Source",
+            url: item.sourceUrl,
+            sourceKind: item.sourceKind || "url",
+            fileName: item.sourceFileName,
+          });
+        }
+        item.agentSources?.forEach((source) => references.set(source.id, source));
+      }
+    });
+    const sourceCount = references.size;
+    const right = Math.max(...scopeItems.map((item) => item.x + (item.type === "source" || item.type === "frame" || item.type === "proposal" ? item.width : 220)));
+    const top = Math.min(...scopeItems.map((item) => item.y));
+    const proposal: BoardProposal = {
+      id: crypto.randomUUID(),
+      type: "proposal",
+      x: right + 42,
+      y: top,
+      text: `I’m holding these ${scopeItems.length} Board ${scopeItems.length === 1 ? "entity" : "entities"} as one bounded context${sourceCount ? ` with ${sourceCount} retained ${sourceCount === 1 ? "Source" : "Sources"}` : ""}. Suggested approach: trace the strongest shared idea, separate evidence from open questions, and preserve the original material.`,
+      prompt,
+      agentName: "Studio agent",
+      scopeIds: scopeItems.map((item) => item.id),
+      scopeLabels: scopeItems.map(itemLabel),
+      sources: [...references.values()],
+      createdAt: new Date().toISOString(),
+      width: DEFAULT_PROPOSAL_SIZE.width,
+      height: DEFAULT_PROPOSAL_SIZE.height,
+    };
+    commit([...items, proposal]);
+    setSelectedIds(new Set([proposal.id]));
+    setAgentComposer(null);
+    setAnnouncement("Studio agent proposal added for review");
+  };
+
+  const acceptProposal = useCallback((proposal: BoardProposal) => {
+    const note: BoardObject = {
+      id: crypto.randomUUID(),
+      type: "note",
+      x: proposal.x,
+      y: proposal.y,
+      text: `Prompt: ${proposal.prompt}\n\n${proposal.text}`,
+      authoredBy: "agent",
+      authorName: proposal.agentName,
+      proposalPrompt: proposal.prompt,
+      agentScopeIds: proposal.scopeIds,
+      agentScopeLabels: proposal.scopeLabels,
+      agentSources: proposal.sources,
+    };
+    commit([...items.filter((item) => item.id !== proposal.id), note]);
+    setSelectedIds(new Set([note.id]));
+    setAnnouncement("Agent proposal accepted as an attributed Note");
+  }, [commit, items]);
+
+  const rejectProposal = useCallback((proposal: BoardProposal) => {
+    commit(items.filter((item) => item.id !== proposal.id));
+    setSelectedIds(new Set());
+    setAnnouncement("Agent proposal rejected");
+  }, [commit, items]);
+
   const openSourceComposer = useCallback((point = viewportCenterWorld()) => {
     setContextMenu(null);
+    setAgentComposer(null);
     setSourceComposer({ point, value: "", error: "" });
     setAnnouncement("Add Source dialog opened");
   }, [viewportCenterWorld]);
@@ -446,7 +591,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   }, [commit, items, selectedIds]);
 
   const beginEditing = useCallback((item: BoardItem) => {
-    if (item.type === "source" || item.type === "connection") return;
+    if (item.type === "source" || item.type === "connection" || item.type === "proposal") return;
     setSelectedIds(new Set([item.id]));
     setEditingId(item.id);
     setDraftText(item.text);
@@ -534,6 +679,16 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
           id: idMap.get(item.id)!,
           fromId: idMap.get(item.fromId) ?? item.fromId,
           toId: idMap.get(item.toId) ?? item.toId,
+        };
+      }
+      if (item.type === "proposal") {
+        return {
+          ...item,
+          id: idMap.get(item.id)!,
+          x: item.x + 24,
+          y: item.y + 24,
+          scopeIds: item.scopeIds.map((id) => idMap.get(id) ?? id),
+          sources: item.sources.map((source) => ({ ...source, id: idMap.get(source.id) ?? source.id })),
         };
       }
       if (item.type === "note") {
@@ -726,6 +881,11 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement || target?.isContentEditable;
       if (event.key === "Escape") {
+        if (agentComposer) {
+          setAgentComposer(null);
+          setAnnouncement("Agent request closed");
+          return;
+        }
         if (sourceComposer) {
           setSourceComposer(null);
           setAnnouncement("Add Source dialog closed");
@@ -775,7 +935,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       }
       if (event.key === "Enter" && selectedIds.size === 1) {
         const item = items.find((candidate) => candidate.id === [...selectedIds][0]);
-        if (item && item.type !== "source" && item.type !== "connection") beginEditing(item);
+        if (item && item.type !== "source" && item.type !== "connection" && item.type !== "proposal") beginEditing(item);
         return;
       }
       if (selectedIds.size > 0 && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
@@ -793,7 +953,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     return () => { window.removeEventListener("keydown", handleKeyDown); window.removeEventListener("keyup", handleKeyUp); };
-  }, [activeTool, beginEditing, cancelEditing, createAtViewportCenter, createFrameFromSelection, deleteSelected, duplicateSelected, editingId, items, nudgeSelected, redo, selectedIds, sourceComposer, undo, zoomAtViewportCenter]);
+  }, [activeTool, agentComposer, beginEditing, cancelEditing, createAtViewportCenter, createFrameFromSelection, deleteSelected, duplicateSelected, editingId, items, nudgeSelected, redo, selectedIds, sourceComposer, undo, zoomAtViewportCenter]);
 
   const handleWheel = (event: ReactWheelEvent<HTMLElement>) => {
     event.preventDefault();
@@ -987,6 +1147,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const selectionToolbarTop = selectionBounds ? (selectionBounds.top > 76 ? selectionBounds.top - 48 : selectionBounds.bottom + 10) : 0;
   const canConnectSelection = items.filter((item) => selectedIds.has(item.id) && isConnectable(item)).length === 2 &&
     [...selectedIds].every((id) => items.find((item) => item.id === id)?.type !== "connection");
+  const canAskSelection = items.filter((item) => selectedIds.has(item.id) && item.type !== "proposal").length >= 2;
 
   return (
     <section
@@ -1055,13 +1216,13 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
               key={item.id}
               data-board-item
               data-board-item-id={item.id}
-              className={`board-object ${item.type}-object${item.type === "note" && item.sourceId ? " has-source" : ""}${item.type === "note" && item.sourceLinkKind === "quote" ? " is-quote" : ""}${selected ? " is-selected" : ""}${editing ? " is-editing" : ""}`}
+              className={`board-object ${item.type}-object${item.type === "note" && item.sourceId ? " has-source" : ""}${item.type === "note" && item.sourceLinkKind === "quote" ? " is-quote" : ""}${item.type === "note" && item.authoredBy === "agent" ? " is-agent-authored" : ""}${selected ? " is-selected" : ""}${editing ? " is-editing" : ""}`}
               style={{
                 transform: `translate(${item.x}px, ${item.y}px)`,
-                ...(item.type === "frame" || item.type === "source" ? { width: item.width, height: item.height } : {}),
+                ...(item.type === "frame" || item.type === "source" || item.type === "proposal" ? { width: item.width, height: item.height } : {}),
               }}
               role="group"
-              aria-label={`${item.type === "frame" ? "Frame" : item.type === "source" ? "Source" : item.type}: ${item.text || "Empty"}${selected ? ", selected" : ""}`}
+              aria-label={`${item.type === "frame" ? "Frame" : item.type === "source" ? "Source" : item.type === "proposal" ? "Agent proposal" : item.type}: ${item.text || "Empty"}${selected ? ", selected" : ""}`}
               tabIndex={editing ? -1 : 0}
               onPointerDown={(event) => beginItemDrag(event, item)}
               onPointerMove={moveItem}
@@ -1069,7 +1230,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
               onPointerCancel={finishItemDrag}
               onDoubleClick={(event) => {
                 event.stopPropagation();
-                if (item.type !== "source") beginEditing(item);
+                if (item.type !== "source" && item.type !== "proposal") beginEditing(item);
               }}
               onFocus={() => { if (!selectedIds.has(item.id)) setSelectedIds(new Set([item.id])); }}
             >
@@ -1118,6 +1279,8 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                     </>
                   )}
                 </>
+              ) : item.type === "proposal" ? (
+                <ProposalCard proposal={item} onAccept={acceptProposal} onReject={rejectProposal} onLocateScope={locateAgentScope} />
               ) : item.type === "source" ? (
                 <SourceCard source={item} selected={selected && selectedIds.size === 1} onCreateFragment={createSourceFragment} />
               ) : editing ? (
@@ -1139,6 +1302,9 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
               ) : <div className="object-surface">{item.text}</div>}
               {item.type === "note" && item.sourceId && (
                 <SourceLineageFooter note={item} sourceExists={items.some((candidate) => candidate.id === item.sourceId && candidate.type === "source")} onLocateSource={locateSource} />
+              )}
+              {item.type === "note" && item.authoredBy === "agent" && (
+                <AgentLineageFooter note={item} onLocateScope={locateAgentScope} />
               )}
             </div>
           );
@@ -1173,6 +1339,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
           <div className="multi-selection-toolbar" role="toolbar" aria-label={`${selectedIds.size} selected Objects`} style={{ left: selectionBounds.left + selectionBounds.width / 2, top: selectionToolbarTop }} onPointerDown={(event) => event.stopPropagation()}>
             <span>{selectedIds.size} selected</span>
             <span className="multi-selection-divider" aria-hidden="true" />
+            {canAskSelection && <button className="is-agent-action" type="button" onClick={openAgentComposer} title="Ask Studio agent about this selection">Ask agent</button>}
             {canConnectSelection && <button type="button" onClick={connectSelected} title="Connect selected Objects">Connect</button>}
             <button type="button" onClick={createFrameFromSelection} title="Create Frame (F)">Frame</button>
             <button type="button" onClick={duplicateSelected} title="Duplicate (⌘D)">Duplicate</button>
@@ -1213,6 +1380,40 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
           <div className="source-composer-actions">
             <button type="button" onClick={() => setSourceComposer(null)}>Cancel</button>
             <button className="is-primary" type="submit">Add to Board</button>
+          </div>
+        </form>
+      )}
+
+      {agentComposer && (
+        <form
+          className="agent-composer"
+          aria-label="Ask Studio agent"
+          style={{ left: agentComposer.screenX, top: agentComposer.screenY }}
+          onSubmit={submitAgentAsk}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <div className="agent-composer-heading">
+            <span className="agent-identity-mark" aria-hidden="true" />
+            <div>
+              <strong>Ask Studio agent</strong>
+              <span>{agentComposer.scopeIds.length} selected {agentComposer.scopeIds.length === 1 ? "Object" : "Objects"} define the context.</span>
+            </div>
+          </div>
+          <label htmlFor="agent-request-input">Request</label>
+          <textarea
+            id="agent-request-input"
+            autoFocus
+            value={agentComposer.value}
+            placeholder="Find the underlying question…"
+            aria-describedby={agentComposer.error ? "agent-request-error" : "agent-request-hint"}
+            onChange={(event) => setAgentComposer({ ...agentComposer, value: event.target.value, error: "" })}
+          />
+          {agentComposer.error
+            ? <span className="agent-composer-error" id="agent-request-error" role="alert">{agentComposer.error}</span>
+            : <span className="agent-composer-hint" id="agent-request-hint">This creates a visible proposal. Your selected material will not be changed.</span>}
+          <div className="agent-composer-actions">
+            <button type="button" onClick={() => setAgentComposer(null)}>Cancel</button>
+            <button className="is-primary" type="submit">Create proposal</button>
           </div>
         </form>
       )}
@@ -1328,6 +1529,70 @@ function SourceCard({
         </a>
       </footer>
     </article>
+  );
+}
+
+function ProposalCard({
+  proposal,
+  onAccept,
+  onReject,
+  onLocateScope,
+}: {
+  proposal: BoardProposal;
+  onAccept: (proposal: BoardProposal) => void;
+  onReject: (proposal: BoardProposal) => void;
+  onLocateScope: (scopeIds: string[]) => boolean;
+}) {
+  return (
+    <article className="proposal-surface">
+      <header className="proposal-heading">
+        <span className="agent-identity-mark" aria-hidden="true" />
+        <div>
+          <strong>{proposal.agentName}</strong>
+          <span>Draft proposal</span>
+        </div>
+        <time dateTime={proposal.createdAt}>{formatSourceDate(proposal.createdAt)}</time>
+      </header>
+      <blockquote>{proposal.prompt}</blockquote>
+      <p>{proposal.text}</p>
+      <div className="proposal-scope" onPointerDown={(event) => event.stopPropagation()}>
+        <button type="button" onClick={() => onLocateScope(proposal.scopeIds)}>
+          {proposal.scopeIds.length} scoped
+        </button>
+        {proposal.sources.length > 0 && (
+          <span title={proposal.sources.map((source) => `${source.title} — ${source.origin}`).join("\n")}>
+            {proposal.sources.length} {proposal.sources.length === 1 ? "Source" : "Sources"}
+          </span>
+        )}
+      </div>
+      <footer className="proposal-actions" onPointerDown={(event) => event.stopPropagation()}>
+        <button type="button" onClick={() => onReject(proposal)}>Reject</button>
+        <button className="is-primary" type="button" onClick={() => onAccept(proposal)}>Accept as note</button>
+      </footer>
+    </article>
+  );
+}
+
+function AgentLineageFooter({
+  note,
+  onLocateScope,
+}: {
+  note: BoardObject;
+  onLocateScope: (scopeIds: string[]) => boolean;
+}) {
+  const scopeCount = note.agentScopeIds?.length ?? note.agentScopeLabels?.length ?? 0;
+  const sourceCount = note.agentSources?.length ?? 0;
+  return (
+    <footer className="agent-lineage" onPointerDown={(event) => event.stopPropagation()}>
+      <span className="agent-identity-mark" aria-hidden="true" />
+      <strong>{note.authorName || "Studio agent"}</strong>
+      {scopeCount > 0 && note.agentScopeIds ? (
+        <button type="button" title="Locate the original scoped Objects" onClick={() => onLocateScope(note.agentScopeIds!)}>
+          · {scopeCount} scoped
+        </button>
+      ) : scopeCount > 0 ? <span>· {scopeCount} scoped</span> : null}
+      {sourceCount > 0 && <span title={note.agentSources?.map((source) => `${source.title} — ${source.origin}`).join("\n")}>· {sourceCount} {sourceCount === 1 ? "Source" : "Sources"}</span>}
+    </footer>
   );
 }
 

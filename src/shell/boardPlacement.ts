@@ -1,6 +1,6 @@
 export type BoardPlacement = "pinned" | "project" | "recent" | null;
 
-interface BoardPlacementCandidate {
+export interface BoardSummary {
   id: string;
   title: string;
   pinned?: boolean;
@@ -8,7 +8,11 @@ interface BoardPlacementCandidate {
   project?: string;
 }
 
-export function boardPlacement(board: BoardPlacementCandidate): BoardPlacement {
+export function createRecentBoardSummary(id: string, title: string): BoardSummary {
+  return { id, title, recent: true };
+}
+
+export function boardPlacement(board: BoardSummary): BoardPlacement {
   if (board.pinned) return "pinned";
   if (board.project) return "project";
   if (board.recent) return "recent";

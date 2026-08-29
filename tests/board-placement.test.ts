@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { boardPlacement } from "../src/shell/boardPlacement";
+import { boardPlacement, createRecentBoardSummary } from "../src/shell/boardPlacement";
+
+test("New Board creates a workspace-level Recent without Project ownership", () => {
+  const board = createRecentBoardSummary("new-board", "Untitled");
+
+  assert.equal(boardPlacement(board), "recent");
+  assert.equal(board.project, undefined);
+});
 
 test("Pinned placement wins while Project ownership remains attached", () => {
   const board = {

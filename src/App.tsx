@@ -6,6 +6,7 @@ import {
   listServiceBoards,
 } from "./data/boardServiceClient";
 import type { BoardSummary as ServiceBoardSummary } from "./domain/types";
+import { createRecentBoardSummary } from "./shell/boardPlacement";
 import { SidebarOpenIcon, WorkspaceSidebar, type BoardSummary } from "./shell/WorkspaceSidebar";
 
 const DEFAULT_TITLE = "Untitled";
@@ -80,7 +81,6 @@ function App() {
       await createServiceBoard({
         boardId: id,
         title: DEFAULT_TITLE,
-        projectId: "Thought Studio",
         idempotencyKey: `canvas-create:${id}`,
       });
     } catch (error) {
@@ -88,7 +88,7 @@ function App() {
     }
     setBoards((current) => [
       ...current,
-      { id, title: DEFAULT_TITLE, recent: true, project: "Thought Studio" },
+      createRecentBoardSummary(id, DEFAULT_TITLE),
     ]);
     setActiveBoardId(id);
   }, []);

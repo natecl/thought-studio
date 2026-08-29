@@ -54,6 +54,16 @@ export interface ReviewProposalCommand {
   idempotencyKey: string;
 }
 
+export interface SetBoardArchivedCommand {
+  boardId: string;
+  archived: boolean;
+  idempotencyKey: string;
+}
+
+export interface DeleteBoardCommand {
+  boardId: string;
+}
+
 interface BoardServiceDependencies {
   createId: () => string;
   now: () => string;
@@ -198,6 +208,42 @@ export class BoardService {
       pendingProposals: board.proposals.filter((proposal) => proposal.status === "pending" &&
         proposal.scope.type === "frame" && proposal.scope.frameId === scope.frameId),
     };
+  }
+
+  async setBoardArchived(principal: BoardPrincipal, command: SetBoardArchivedCommand) {
+    const board = await this.requireBoard(command.boardId);
+    const scope: BoardScope = { type: "board", boardId: board.id };
+    requireCapability(principal, "board:write", board.workspaceId, scope);
+    invariant(command.idempotencyKey.length > 0, "idempotencyKey is required");
+    const kind = command.archived ? "board.archived" : "board.restored";
+    const prior = board.history.find((entry) => entry.kind === kind &&
+      entry.idempotencyKey === command.idempotencyKey && entry.actor.id === principal.participant.id);
+    if (prior || Boolean(board.archivedAt) === command.archived) return board;
+
+    const timestamp = this.dependencies.now();
+    const next: BoardRecord = {
+      ...board,
+      version: board.version + 1,
+      updatedAt: timestamp,
+      archivedAt: command.archived ? timestamp : undefined,
+      history: [...board.history, activity(this.dependencies, {
+        kind,
+        actor: principal.participant,
+        scope,
+        idempotencyKey: command.idempotencyKey,
+        operationIds: [],
+        summary: `${command.archived ? "Archived" : "Restored"} Board "${board.title}"`,
+      })],
+    };
+    await this.repository.save(next, board.version);
+    return next;
+  }
+
+  async deleteBoard(principal: BoardPrincipal, command: DeleteBoardCommand) {
+    const board = await this.requireBoard(command.boardId);
+    requireCapability(principal, "board:write", board.workspaceId, { type: "board", boardId: board.id });
+    await this.repository.delete(board.id, board.version);
+    return summarize(board);
   }
 
   async proposeChanges(principal: BoardPrincipal, command: ProposeChangesCommand) {

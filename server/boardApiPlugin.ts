@@ -69,6 +69,14 @@ function requiredNumber(body: Record<string, unknown>, key: string) {
   return value;
 }
 
+function requiredBoolean(body: Record<string, unknown>, key: string) {
+  const value = body[key];
+  if (typeof value !== "boolean") {
+    throw new BoardDomainError(`${key} must be a boolean`, "validation_failed");
+  }
+  return value;
+}
+
 function statusForError(error: BoardDomainError) {
   if (error.code === "not_found") return 404;
   if (error.code === "permission_denied") return 403;
@@ -105,6 +113,28 @@ async function routeBoardRequest(request: IncomingMessage, response: ServerRespo
       idempotencyKey: requiredString(body, "idempotencyKey"),
     });
     sendJson(response, 201, board);
+    return true;
+  }
+
+  const boardMatch = path.match(/^\/api\/boards\/([^/]+)$/);
+  if (request.method === "PATCH" && boardMatch) {
+    const boardId = decodeURIComponent(boardMatch[1]);
+    const body = await readJson(request);
+    const board = await service.getBoard(principal, boardId);
+    sendJson(response, 200, await service.setBoardArchived(localHumanPrincipal(board.workspaceId), {
+      boardId,
+      archived: requiredBoolean(body, "archived"),
+      idempotencyKey: requiredString(body, "idempotencyKey"),
+    }));
+    return true;
+  }
+
+  if (request.method === "DELETE" && boardMatch) {
+    const boardId = decodeURIComponent(boardMatch[1]);
+    const board = await service.getBoard(principal, boardId);
+    sendJson(response, 200, {
+      deleted: await service.deleteBoard(localHumanPrincipal(board.workspaceId), { boardId }),
+    });
     return true;
   }
 

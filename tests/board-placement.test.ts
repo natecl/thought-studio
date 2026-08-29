@@ -35,3 +35,14 @@ test("Recents contains only unpinned Boards without Project ownership", () => {
   assert.equal(boardPlacement({ id: "recent-board", title: "Recent Board", recent: true }), "recent");
   assert.equal(boardPlacement({ id: "unplaced-board", title: "Unplaced Board" }), null);
 });
+
+test("Archived placement wins over pinning, Projects, and Recents", () => {
+  assert.equal(boardPlacement({
+    id: "archived-board",
+    title: "Archived Board",
+    archived: true,
+    pinned: true,
+    recent: true,
+    project: "Thought Studio",
+  }), "archived");
+});

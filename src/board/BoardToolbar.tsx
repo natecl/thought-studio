@@ -36,7 +36,13 @@ export function BoardToolbar({
   onZoomOut,
 }: BoardToolbarProps) {
   return (
-    <div className="board-toolbar" role="toolbar" aria-label="Board tools" onPointerDown={(event) => event.stopPropagation()}>
+    <div
+      className="board-toolbar"
+      role="toolbar"
+      aria-label="Board tools"
+      onPointerDown={(event) => event.stopPropagation()}
+      onWheel={(event) => event.stopPropagation()}
+    >
       <ToolButton
         label="Select"
         shortcut="V"

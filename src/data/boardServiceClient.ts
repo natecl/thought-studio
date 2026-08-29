@@ -51,6 +51,29 @@ export function createServiceBoard(input: {
   });
 }
 
+export function setServiceBoardArchived(input: {
+  boardId: string;
+  archived: boolean;
+  idempotencyKey: string;
+  workspaceId?: string;
+}) {
+  const workspaceId = input.workspaceId ?? DEFAULT_WORKSPACE_ID;
+  return requestJson<BoardRecord>(
+    `/api/boards/${encodeURIComponent(input.boardId)}?workspaceId=${encodeURIComponent(workspaceId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ archived: input.archived, idempotencyKey: input.idempotencyKey }),
+    },
+  );
+}
+
+export function deleteServiceBoard(boardId: string, workspaceId = DEFAULT_WORKSPACE_ID) {
+  return requestJson<{ deleted: BoardSummary }>(
+    `/api/boards/${encodeURIComponent(boardId)}?workspaceId=${encodeURIComponent(workspaceId)}`,
+    { method: "DELETE" },
+  );
+}
+
 export function getServiceBoardContext(boardId: string, workspaceId = DEFAULT_WORKSPACE_ID) {
   return requestJson<BoardContext>(
     `/api/boards/${encodeURIComponent(boardId)}/context?workspaceId=${encodeURIComponent(workspaceId)}`,

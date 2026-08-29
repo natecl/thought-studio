@@ -11,6 +11,7 @@ interface HistoryState {
 }
 
 type HistoryAction =
+  | { type: "hydrate"; next: BoardItem[] }
   | { type: "commit"; next: BoardItem[] }
   | { type: "replace"; next: BoardItem[] }
   | { type: "checkpoint"; before: BoardItem[] }
@@ -23,6 +24,8 @@ function itemsMatch(left: BoardItem[], right: BoardItem[]) {
 
 function historyReducer(state: HistoryState, action: HistoryAction): HistoryState {
   switch (action.type) {
+    case "hydrate":
+      return { past: [], present: action.next, future: [] };
     case "commit":
       if (itemsMatch(state.present, action.next)) return state;
       return {
@@ -138,6 +141,7 @@ export function useBoardHistory(boardId: string) {
   }, [state.present, storageKey]);
 
   const commit = useCallback((next: BoardItem[]) => dispatch({ type: "commit", next }), []);
+  const hydrate = useCallback((next: BoardItem[]) => dispatch({ type: "hydrate", next }), []);
   const replace = useCallback((next: BoardItem[]) => dispatch({ type: "replace", next }), []);
   const checkpoint = useCallback((before: BoardItem[]) => dispatch({ type: "checkpoint", before }), []);
   const undo = useCallback(() => dispatch({ type: "undo" }), []);
@@ -145,6 +149,7 @@ export function useBoardHistory(boardId: string) {
 
   return {
     items: state.present,
+    hydrate,
     commit,
     replace,
     checkpoint,

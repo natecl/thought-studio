@@ -6,7 +6,7 @@ import { BoardService } from "../src/domain/BoardService";
 import { BoardDomainError } from "../src/domain/errors";
 import { parseBoardOperations } from "../src/domain/operations";
 import type { BoardCapability, BoardPrincipal, BoardScope, ParticipantKind } from "../src/domain/types";
-import { JsonFileBoardRepository } from "./JsonFileBoardRepository";
+import { JsonFileBoardRepository } from "../src/infrastructure/JsonFileBoardRepository";
 
 interface ParsedArguments {
   positionals: string[];

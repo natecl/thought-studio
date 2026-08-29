@@ -191,6 +191,7 @@ export interface BoardChangeProposal {
 
 export type BoardActivityKind =
   | "board.created"
+  | "canvas.synchronized"
   | "changes.proposed"
   | "changes.applied"
   | "proposal.accepted"

@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --configLoader runner",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.cli.json",
     "test": "tsx --test tests/**/*.test.ts",
     "thought": "tsx cli/index.ts",
-    "build": "npm run typecheck && vite build",
+    "build": "npm run typecheck && vite build --configLoader runner",
     "preview": "vite preview"
   },
   "dependencies": {

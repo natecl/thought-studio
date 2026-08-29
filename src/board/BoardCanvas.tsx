@@ -10,6 +10,11 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import {
+  BoardApiError,
+  getServiceBoardContext,
+  synchronizeServiceCanvas,
+} from "../data/boardServiceClient";
 import { BoardToolbar, type CanvasTool } from "./BoardToolbar";
 import { connectionPath } from "./connection";
 import {
@@ -80,6 +85,7 @@ interface FrameResizeGesture {
   moved: boolean;
 }
 interface BoardCanvasProps { boardId: string; title: string }
+type ServiceSyncState = "loading" | "ready" | "offline" | "conflict";
 
 const FRAME_RESIZE_HANDLES: FrameResizeHandle[] = [
   "north-west",
@@ -171,7 +177,12 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const frameResizeRef = useRef<FrameResizeGesture | null>(null);
   const sourceFileInputRef = useRef<HTMLInputElement>(null);
   const lastPointerWorldRef = useRef<Point | null>(null);
-  const { items, commit, replace, checkpoint, undo, redo, canUndo, canRedo } = useBoardHistory(boardId);
+  const { items, hydrate, commit, replace, checkpoint, undo, redo, canUndo, canRedo } = useBoardHistory(boardId);
+  const itemsRef = useRef(items);
+  const serviceVersionRef = useRef<number | null>(null);
+  const serviceContentVersionRef = useRef<number | null>(null);
+  const lastSynchronizedItemsRef = useRef<string | null>(null);
+  const synchronizationQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [selectionDraft, setSelectionDraft] = useState<SelectionDraft | null>(null);
@@ -187,6 +198,113 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [announcement, setAnnouncement] = useState("Empty board");
+  const [serviceSyncState, setServiceSyncState] = useState<ServiceSyncState>("loading");
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let retryTimeout: number | undefined;
+    setServiceSyncState("loading");
+    serviceVersionRef.current = null;
+    serviceContentVersionRef.current = null;
+    lastSynchronizedItemsRef.current = null;
+
+    const hydrateFromService = async (attempt = 0) => {
+      try {
+        const context = await getServiceBoardContext(boardId);
+        let serviceItems = context.items;
+        let version = context.board.version;
+        let contentVersion = context.board.contentVersion;
+        const cachedItems = itemsRef.current;
+
+        if (serviceItems.length === 0 && cachedItems.length > 0) {
+          const migrated = await synchronizeServiceCanvas({
+            boardId,
+            expectedVersion: version,
+            idempotencyKey: `legacy-canvas:${boardId}`,
+            items: cachedItems,
+          });
+          serviceItems = migrated.items;
+          version = migrated.version;
+          contentVersion = migrated.contentVersion;
+        }
+
+        if (cancelled) return;
+        serviceVersionRef.current = version;
+        serviceContentVersionRef.current = contentVersion;
+        lastSynchronizedItemsRef.current = JSON.stringify(serviceItems);
+        itemsRef.current = serviceItems;
+        hydrate(serviceItems);
+        setServiceSyncState("ready");
+        setAnnouncement(serviceItems.length === 0 ? "Empty board" : "Board loaded from the shared service");
+      } catch (error) {
+        if (cancelled) return;
+        if (attempt === 0) console.warn("The canonical Board service is unavailable; using the browser cache.", error);
+        setServiceSyncState("offline");
+        setAnnouncement("Working from the browser cache");
+        if (attempt < 4) {
+          retryTimeout = window.setTimeout(() => void hydrateFromService(attempt + 1), 700);
+        }
+      }
+    };
+
+    void hydrateFromService();
+    return () => {
+      cancelled = true;
+      if (retryTimeout !== undefined) window.clearTimeout(retryTimeout);
+    };
+  }, [boardId, hydrate]);
+
+  useEffect(() => {
+    if (serviceSyncState !== "ready") return;
+    const serializedItems = JSON.stringify(items);
+    if (serializedItems === lastSynchronizedItemsRef.current) return;
+
+    const timeout = window.setTimeout(() => {
+      const snapshot = structuredClone(items);
+      const serializedSnapshot = JSON.stringify(snapshot);
+      synchronizationQueueRef.current = synchronizationQueueRef.current.then(async () => {
+        if (serializedSnapshot === lastSynchronizedItemsRef.current) return;
+        const expectedVersion = serviceVersionRef.current;
+        if (expectedVersion === null) return;
+
+        const synchronize = (version: number) => synchronizeServiceCanvas({
+          boardId,
+          expectedVersion: version,
+          idempotencyKey: `canvas-sync:${crypto.randomUUID()}`,
+          items: snapshot,
+        });
+
+        try {
+          let synchronized;
+          try {
+            synchronized = await synchronize(expectedVersion);
+          } catch (error) {
+            if (!(error instanceof BoardApiError && error.code === "version_conflict")) throw error;
+            const current = await getServiceBoardContext(boardId);
+            if (current.board.contentVersion !== serviceContentVersionRef.current) throw error;
+            synchronized = await synchronize(current.board.version);
+          }
+          serviceVersionRef.current = synchronized.version;
+          serviceContentVersionRef.current = synchronized.contentVersion;
+          lastSynchronizedItemsRef.current = serializedSnapshot;
+        } catch (error) {
+          console.warn("Canvas changes could not be synchronized.", error);
+          if (error instanceof BoardApiError && error.code === "version_conflict") {
+            setServiceSyncState("conflict");
+            setAnnouncement("Board changed elsewhere. Reload before continuing to synchronize.");
+          } else {
+            setServiceSyncState("offline");
+            setAnnouncement("Board service disconnected. Changes remain in this browser.");
+          }
+        }
+      });
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [boardId, items, serviceSyncState]);
 
   const screenToWorld = useCallback((clientX: number, clientY: number) => {
     const rect = viewportRef.current?.getBoundingClientRect();
@@ -1453,6 +1571,15 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         onResetView={() => { setCamera(DEFAULT_CAMERA); setAnnouncement("View reset"); }}
         onZoomIn={() => { zoomAtViewportCenter(1.12); setAnnouncement("Zoomed in"); }}
       />
+
+      {(serviceSyncState === "offline" || serviceSyncState === "conflict") && (
+        <div className={`board-service-status is-${serviceSyncState}`} role="status">
+          <span aria-hidden="true" />
+          {serviceSyncState === "conflict"
+            ? "Board changed elsewhere. Reload to review it."
+            : "Changes remain in this browser. Reload after the Board service returns."}
+        </div>
+      )}
 
       {contextMenu && (
         <div className="canvas-context-menu" role="menu" aria-label="Canvas actions" style={{ left: contextMenu.screenX, top: contextMenu.screenY }} onPointerDown={(event) => event.stopPropagation()}>

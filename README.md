@@ -57,7 +57,9 @@ npm run thought -- boards create --title "Research map" --actor-type agent
 npm run thought -- boards list
 ```
 
-CLI data defaults to `.thought-studio/boards.json`, which is a local development repository rather than a production persistence decision. The interactive canvas continues to use browser-local persistence until its repository migration slice.
+CLI data defaults to `.thought-studio/boards.json`. The localhost canvas uses a Vite development API over the same canonical Board service and JSON repository, so Boards and accepted Board items created through the CLI appear in the visible workspace. Existing browser-local Boards are imported when their canonical Board is still empty, and browser storage remains an offline cache for the prototype.
+
+The localhost API trusts the local human session and is not a production authentication boundary. The JSON repository, polling catalog refresh, and browser-cache fallback are development adapters rather than settled hosted persistence or synchronization decisions.
 
 ### Current implementation milestone
 
@@ -65,7 +67,7 @@ CLI data defaults to `.thought-studio/boards.json`, which is a local development
 - Collapsible workspace sidebar with Pinned, Recents, and Projects
 - Responsive Board tool dock for implemented creation and view controls
 - Exact selected Thought Bloom logo asset
-- Functional multi-Board navigation and local per-Board persistence
+- Functional multi-Board navigation backed by the canonical local Board service
 - Exclusive Pinned placement with retained Project ownership
 - Pan and zoom across a shared Board coordinate system
 - Contextual text and note creation
@@ -78,7 +80,8 @@ CLI data defaults to `.thought-studio/boards.json`, which is a local development
 - Collective dragging, keyboard nudging, duplication, and deletion
 - First-class Frames with naming, explicit membership, collective movement, and duplication
 - Undo and redo for meaningful Object operations
-- Local Board-item persistence across reloads
+- Shared local JSON persistence for the canvas and CLI, with validated legacy browser-cache migration
+- Localhost Board API with safe optimistic conflict handling and attributed canvas reconciliation
 - Framework-independent TypeScript Board service with scoped permissions, optimistic versions, idempotency, proposals, and attributed activity history
 - Local CLI adapter for agent-created Boards, Board or Frame context inspection, and proposed-operation review
 

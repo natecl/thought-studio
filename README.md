@@ -68,7 +68,7 @@ The localhost API trusts the local human session and is not a production authent
 - Responsive Board tool dock for implemented creation and view controls
 - Exact selected Thought Bloom logo asset
 - Functional multi-Board navigation backed by the canonical local Board service
-- Exclusive Pinned, Project, or Recents placement, with Project ownership retained while pinned
+- Exclusive Pinned, Project, or Recents placement; new Boards begin in Recents below Projects, while Project ownership is retained when pinned
 - Pan and zoom across a shared Board coordinate system
 - Contextual text and note creation
 - Universal URL Sources through paste or manual entry, with retained origin and import provenance

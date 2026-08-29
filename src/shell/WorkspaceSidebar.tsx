@@ -1,14 +1,8 @@
 import { useMemo, useState, type ReactNode } from "react";
 import bloomMark from "../../docs/design/brand/thought-bloom-mark-selected.png";
-import { boardPlacement } from "./boardPlacement";
+import { boardPlacement, type BoardSummary } from "./boardPlacement";
 
-export interface BoardSummary {
-  id: string;
-  title: string;
-  pinned?: boolean;
-  recent?: boolean;
-  project?: string;
-}
+export type { BoardSummary } from "./boardPlacement";
 
 interface WorkspaceSidebarProps {
   boards: BoardSummary[];
@@ -95,20 +89,6 @@ export function WorkspaceSidebar({
           ))}
         </SidebarSection>
 
-        {recentBoards.length > 0 && (
-          <SidebarSection title="Recents">
-            {recentBoards.map((board) => (
-              <BoardRow
-                key={`recent-${board.id}`}
-                board={board}
-                active={board.id === activeBoardId}
-                onSelect={onSelectBoard}
-                onTogglePin={onTogglePin}
-              />
-            ))}
-          </SidebarSection>
-        )}
-
         <SidebarSection title="Projects" action={<button type="button" aria-label="Create project">+</button>}>
           {projects.map((project) => {
             const isExpanded = expandedProjects.has(project);
@@ -146,6 +126,20 @@ export function WorkspaceSidebar({
             );
           })}
         </SidebarSection>
+
+        {recentBoards.length > 0 && (
+          <SidebarSection title="Recents">
+            {recentBoards.map((board) => (
+              <BoardRow
+                key={`recent-${board.id}`}
+                board={board}
+                active={board.id === activeBoardId}
+                onSelect={onSelectBoard}
+                onTogglePin={onTogglePin}
+              />
+            ))}
+          </SidebarSection>
+        )}
       </nav>
 
       <button className="sidebar-account" type="button">

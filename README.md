@@ -53,10 +53,11 @@ npm run typecheck
 - Contextual text and note creation
 - Single and multi-selection with Shift-click, marquee, and freeform lasso
 - Collective dragging, keyboard nudging, duplication, and deletion
+- First-class Frames with naming, explicit membership, collective movement, and duplication
 - Undo and redo for meaningful Object operations
 - Local Board-item persistence across reloads
 
-See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. Frames, Sources, and agent participation are the next interaction milestones. The approved mockup is a visual reference; the coded interface is the product implementation.
+See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. Universal Sources, Connections, and agent participation are the next interaction milestones. The approved mockup is a visual reference; the coded interface is the product implementation.
 
 ## Start here
 

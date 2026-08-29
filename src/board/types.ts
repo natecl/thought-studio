@@ -1,12 +1,26 @@
-export type BoardItemType = "text" | "note";
+export type BoardObjectType = "text" | "note";
+export type BoardItemType = BoardObjectType | "frame";
 
-export interface BoardItem {
+interface BoardEntityBase {
   id: string;
-  type: BoardItemType;
   x: number;
   y: number;
+}
+
+export interface BoardObject extends BoardEntityBase {
+  type: BoardObjectType;
   text: string;
 }
+
+export interface BoardFrame extends BoardEntityBase {
+  type: "frame";
+  text: string;
+  width: number;
+  height: number;
+  childIds: string[];
+}
+
+export type BoardItem = BoardObject | BoardFrame;
 
 export interface Camera {
   x: number;

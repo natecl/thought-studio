@@ -54,6 +54,8 @@ A bounded region of the board with a purpose. A Frame can represent a question, 
 
 Frames provide focus inside a large spatial environment without dividing the board into separate applications.
 
+The current prototype represents a Frame as a first-class persisted Board entity with a title, spatial bounds, and explicit child Object identities. This is the first implementation of a context boundary shared by the visible Board and future agent-facing APIs. Direct manipulation keeps membership synchronized with visible containment; nested Frames remain an open design question.
+
 ### Participant
 
 An actor present on the board. A Participant may be a person or an agent and has identity, presence, capabilities, permissions, and activity history.

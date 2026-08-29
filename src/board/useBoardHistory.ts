@@ -74,12 +74,18 @@ function loadItems(storageKey: string): BoardItem[] {
     return parsed.filter((item): item is BoardItem => {
       if (!item || typeof item !== "object") return false;
       const candidate = item as Partial<BoardItem>;
-      return (
+      const hasBaseFields =
         typeof candidate.id === "string" &&
-        (candidate.type === "text" || candidate.type === "note") &&
         typeof candidate.x === "number" &&
-        typeof candidate.y === "number" &&
-        typeof candidate.text === "string"
+        typeof candidate.y === "number";
+      if (!hasBaseFields || typeof candidate.text !== "string") return false;
+      if (candidate.type === "text" || candidate.type === "note") return true;
+      return (
+        candidate.type === "frame" &&
+        typeof candidate.width === "number" &&
+        typeof candidate.height === "number" &&
+        Array.isArray(candidate.childIds) &&
+        candidate.childIds.every((id) => typeof id === "string")
       );
     });
   } catch {

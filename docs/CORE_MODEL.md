@@ -42,7 +42,7 @@ A Source should preserve:
 - Stable reference to extracted material
 - Changes or synchronization state when applicable
 
-The current interaction prototype implements the first universal Source slice for URLs. A pasted or manually entered web address becomes a persisted Board entity with a normalized original link, origin, import time, and local preview. It uses the same selection, movement, Frame membership, history, and persistence mechanics as other Board material without selecting a remote metadata provider or backend architecture.
+The current interaction prototype implements the first universal Source slice for URLs. A pasted or manually entered web address becomes a persisted Board entity with a normalized original link, origin, import time, and local preview. It uses the same selection, movement, Frame membership, history, and persistence mechanics as other Board material without selecting a remote metadata provider or backend architecture. Notes and quotations created from a Source retain both its live Board identity and a durable provenance snapshot, so their lineage survives Source removal and can still open the original material.
 
 ### Connection
 

@@ -1,6 +1,6 @@
 # Interaction prototype foundation
 
-- **Status:** Milestone 4B implemented
+- **Status:** Milestone 4C implemented
 - **Date:** 2026-08-29
 - **Initial input priority:** Desktop pointer and keyboard
 
@@ -27,6 +27,7 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 | Select a freeform area | Draw around Objects with Lasso | `L`, then draw |
 | Select everything | — | Command/Control-A |
 | Connect two entities | Select exactly two Board entities, then choose Connect in the selection toolbar | — |
+| Create a Source fragment | Select a Source, then choose Note or Quote in its contextual toolbar | — |
 | Frame a selection | Select Objects, then choose Frame in the selection toolbar | `F` |
 | Move | Drag any selected Object to move the selection | Arrow keys; Shift-arrow moves 10 px |
 | Move a Frame | Drag the Frame boundary to move it and its contained Objects | Arrow keys; Shift-arrow moves 10 px |
@@ -48,6 +49,9 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Sources participate in selection, movement, framing, duplication, deletion, undo, and local persistence using the same Board entity model as manually authored material.
 - A Connection begins as an intentionally non-semantic visual relationship between two selected Board entities. It follows both endpoints, can be selected directly, and becomes Studio Blue only when selected.
 - Connections persist, duplicate with both endpoints, delete with a removed endpoint, and participate in meaningful undo and redo operations.
+- Selecting a Source exposes quiet Note and Quote actions. The resulting fragment retains the live Source identity plus a durable title, origin, and URL snapshot.
+- Linked fragments can locate an existing Source on the Board. If that Source is removed, the fragment keeps its original provenance and external link rather than losing lineage.
+- Multiple fragments from one Source form a vertical trail beside it instead of overlapping.
 - Object creation, editing, movement, and deletion are meaningful undoable operations.
 - Multi-selection has one shared boundary and one contextual toolbar while preserving each Object's individual identity.
 - Selected Objects move, nudge, duplicate, and delete as one reversible operation.
@@ -67,8 +71,9 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Ink and erasing
 - Shapes and semantic Connection labels
 - Image and file Sources
+- Automatic extraction, transcription, and quotation detection
 - Server persistence and synchronization
 - Multiplayer presence
 - Agent selection and proposal workflows
 
-The next milestone should let people create Source-linked notes and quotations so extracted context retains visible lineage before additional Source kinds and agent participation.
+The next milestone should extend the universal Source model to images and files while preserving the same spatial behavior and provenance contract.

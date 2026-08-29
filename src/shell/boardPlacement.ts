@@ -1,4 +1,4 @@
-export type BoardPlacement = "pinned" | "project" | "recent" | null;
+export type BoardPlacement = "pinned" | "project" | "recent" | "archived" | null;
 
 export interface BoardSummary {
   id: string;
@@ -6,6 +6,8 @@ export interface BoardSummary {
   pinned?: boolean;
   recent?: boolean;
   project?: string;
+  archived?: boolean;
+  serviceVersion?: number;
 }
 
 export function createRecentBoardSummary(id: string, title: string): BoardSummary {
@@ -13,6 +15,7 @@ export function createRecentBoardSummary(id: string, title: string): BoardSummar
 }
 
 export function boardPlacement(board: BoardSummary): BoardPlacement {
+  if (board.archived) return "archived";
   if (board.pinned) return "pinned";
   if (board.project) return "project";
   if (board.recent) return "recent";

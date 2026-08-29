@@ -191,6 +191,8 @@ export interface BoardChangeProposal {
 
 export type BoardActivityKind =
   | "board.created"
+  | "board.archived"
+  | "board.restored"
   | "canvas.synchronized"
   | "changes.proposed"
   | "changes.applied"
@@ -217,6 +219,7 @@ export interface BoardRecord {
   createdBy: ParticipantRef;
   createdAt: string;
   updatedAt: string;
+  archivedAt?: string;
   version: number;
   contentVersion: number;
   items: BoardItem[];
@@ -232,6 +235,7 @@ export interface BoardSummary {
   createdBy: ParticipantRef;
   createdAt: string;
   updatedAt: string;
+  archivedAt?: string;
   version: number;
   contentVersion: number;
 }

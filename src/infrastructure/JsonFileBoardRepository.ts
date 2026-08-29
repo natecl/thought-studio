@@ -52,6 +52,12 @@ export class JsonFileBoardRepository implements BoardRepository {
     return write;
   }
 
+  async delete(boardId: string, expectedVersion: number) {
+    const write = this.writeQueue.then(() => this.withFileLock(() => this.deleteLocked(boardId, expectedVersion)));
+    this.writeQueue = write.catch(() => undefined);
+    return write;
+  }
+
   private async saveLocked(board: BoardRecord, expectedVersion: number | null) {
     const store = await this.readStore();
     const index = store.boards.findIndex((candidate) => candidate.id === board.id);
@@ -65,6 +71,17 @@ export class JsonFileBoardRepository implements BoardRepository {
       }
       store.boards[index] = cloneBoard(board);
     }
+    await this.writeStore(store);
+  }
+
+  private async deleteLocked(boardId: string, expectedVersion: number) {
+    const store = await this.readStore();
+    const index = store.boards.findIndex((candidate) => candidate.id === boardId);
+    const current = store.boards[index];
+    if (!current || current.version !== expectedVersion) {
+      throw new BoardDomainError(`Board "${boardId}" changed before this operation could be saved`, "version_conflict");
+    }
+    store.boards.splice(index, 1);
     await this.writeStore(store);
   }
 

@@ -5,6 +5,7 @@ export interface BoardRepository {
   list(workspaceId?: string): Promise<BoardRecord[]>;
   get(boardId: string): Promise<BoardRecord | null>;
   save(board: BoardRecord, expectedVersion: number | null): Promise<void>;
+  delete(boardId: string, expectedVersion: number): Promise<void>;
 }
 
 function cloneBoard(board: BoardRecord) {
@@ -37,5 +38,13 @@ export class InMemoryBoardRepository implements BoardRepository {
       throw new BoardDomainError(`Board "${board.id}" changed before this operation could be saved`, "version_conflict");
     }
     this.boards.set(board.id, cloneBoard(board));
+  }
+
+  async delete(boardId: string, expectedVersion: number) {
+    const current = this.boards.get(boardId);
+    if (!current || current.version !== expectedVersion) {
+      throw new BoardDomainError(`Board "${boardId}" changed before this operation could be saved`, "version_conflict");
+    }
+    this.boards.delete(boardId);
   }
 }

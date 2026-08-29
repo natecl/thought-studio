@@ -158,6 +158,62 @@ test("canvas reconciliation refuses to overwrite a newer Board version", async (
   assert.equal((await service.getBoard(human, board.id)).version, changed.version);
 });
 
+test("a human can archive, restore, and permanently delete a Board", async () => {
+  const service = deterministicService();
+  const human = humanPrincipal();
+  const board = await service.createBoard(human, {
+    workspaceId: "workspace-1",
+    title: "Lifecycle board",
+    idempotencyKey: "create-lifecycle-board",
+  });
+
+  const archived = await service.setBoardArchived(human, {
+    boardId: board.id,
+    archived: true,
+    idempotencyKey: "archive-lifecycle-board",
+  });
+  assert.equal(typeof archived.archivedAt, "string");
+  assert.equal(archived.history.at(-1)?.kind, "board.archived");
+
+  const restored = await service.setBoardArchived(human, {
+    boardId: board.id,
+    archived: false,
+    idempotencyKey: "restore-lifecycle-board",
+  });
+  assert.equal(restored.archivedAt, undefined);
+  assert.equal(restored.history.at(-1)?.kind, "board.restored");
+
+  await service.deleteBoard(human, { boardId: board.id });
+  await assert.rejects(
+    service.getBoard(human, board.id),
+    (error) => error instanceof BoardDomainError && error.code === "not_found",
+  );
+});
+
+test("an agent cannot archive or delete a Board without write permission", async () => {
+  const service = deterministicService();
+  const human = humanPrincipal();
+  const agent = agentPrincipal();
+  const board = await service.createBoard(human, {
+    workspaceId: "workspace-1",
+    title: "Human-controlled board",
+    idempotencyKey: "create-human-controlled-board",
+  });
+
+  await assert.rejects(
+    service.setBoardArchived(agent, {
+      boardId: board.id,
+      archived: true,
+      idempotencyKey: "agent-archive-board",
+    }),
+    (error) => error instanceof BoardDomainError && error.code === "permission_denied",
+  );
+  await assert.rejects(
+    service.deleteBoard(agent, { boardId: board.id }),
+    (error) => error instanceof BoardDomainError && error.code === "permission_denied",
+  );
+});
+
 test("an agent proposes a batch and a human accepts it with attribution intact", async () => {
   const service = deterministicService();
   const human = humanPrincipal();

@@ -3,10 +3,12 @@ import { BoardCanvas } from "./board/BoardCanvas";
 import {
   BoardApiError,
   createServiceBoard,
+  deleteServiceBoard,
   listServiceBoards,
+  setServiceBoardArchived,
 } from "./data/boardServiceClient";
 import type { BoardSummary as ServiceBoardSummary } from "./domain/types";
-import { createRecentBoardSummary } from "./shell/boardPlacement";
+import { boardPlacement, createRecentBoardSummary } from "./shell/boardPlacement";
 import { SidebarOpenIcon, WorkspaceSidebar, type BoardSummary } from "./shell/WorkspaceSidebar";
 
 const DEFAULT_TITLE = "Untitled";
@@ -49,7 +51,13 @@ function mergeServiceBoards(current: BoardSummary[], serviceBoards: ServiceBoard
   const merged = current.map((board) => {
     const serviceBoard = serviceById.get(board.id);
     return serviceBoard
-      ? { ...board, title: serviceBoard.title, project: serviceBoard.projectId ?? board.project }
+      ? {
+          ...board,
+          title: serviceBoard.title,
+          project: serviceBoard.projectId ?? board.project,
+          archived: Boolean(serviceBoard.archivedAt),
+          serviceVersion: serviceBoard.version,
+        }
       : board;
   });
   const knownIds = new Set(merged.map((board) => board.id));
@@ -61,6 +69,8 @@ function mergeServiceBoards(current: BoardSummary[], serviceBoards: ServiceBoard
       title: board.title,
       recent: true,
       project: board.projectId,
+      archived: Boolean(board.archivedAt),
+      serviceVersion: board.version,
     }));
   return [...merged, ...discovered];
 }
@@ -145,6 +155,62 @@ function App() {
     );
   };
 
+  const setBoardArchived = useCallback(async (boardId: string, archived: boolean) => {
+    const before = boardsRef.current;
+    const target = before.find((board) => board.id === boardId);
+    if (!target) return;
+    const next = before.map((board) => board.id === boardId
+      ? { ...board, archived, pinned: archived ? false : board.pinned }
+      : board);
+    boardsRef.current = next;
+    setBoards(next);
+
+    try {
+      const saved = await setServiceBoardArchived({
+        boardId,
+        archived,
+        idempotencyKey: `sidebar-${archived ? "archive" : "restore"}:${boardId}:${crypto.randomUUID()}`,
+      });
+      setBoards((current) => current.map((board) => board.id === boardId
+        ? { ...board, archived: Boolean(saved.archivedAt), serviceVersion: saved.version }
+        : board));
+      if (archived && activeBoardId === boardId) {
+        const fallback = next.find((board) => board.id !== boardId && boardPlacement(board) !== "archived");
+        if (fallback) setActiveBoardId(fallback.id);
+        else await createBoard();
+      }
+    } catch (error) {
+      boardsRef.current = before;
+      setBoards(before);
+      console.warn(`The Board could not be ${archived ? "archived" : "restored"}.`, error);
+    }
+  }, [activeBoardId, createBoard]);
+
+  const deleteBoard = useCallback(async (boardId: string) => {
+    const before = boardsRef.current;
+    if (!before.some((board) => board.id === boardId)) return;
+    if (before.length === 1) {
+      console.warn("A workspace must keep at least one Board.");
+      return;
+    }
+    const survivors = before.filter((board) => board.id !== boardId);
+    const deletingActiveBoard = activeBoardId === boardId;
+    const fallback = survivors.find((board) => boardPlacement(board) !== "archived");
+    boardsRef.current = survivors;
+    setBoards(survivors);
+    if (deletingActiveBoard && fallback) setActiveBoardId(fallback.id);
+
+    try {
+      await deleteServiceBoard(boardId);
+      if (deletingActiveBoard && !fallback) await createBoard();
+    } catch (error) {
+      boardsRef.current = before;
+      setBoards(before);
+      if (deletingActiveBoard) setActiveBoardId(boardId);
+      console.warn("The Board could not be deleted.", error);
+    }
+  }, [activeBoardId, createBoard]);
+
   useEffect(() => {
     localStorage.setItem(BOARDS_STORAGE_KEY, JSON.stringify(boards));
   }, [boards]);
@@ -176,6 +242,8 @@ function App() {
           onCreateBoard={createBoard}
           onSelectBoard={selectBoard}
           onTogglePin={toggleBoardPin}
+          onSetArchived={setBoardArchived}
+          onDeleteBoard={deleteBoard}
         />
       )}
 

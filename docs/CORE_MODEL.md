@@ -50,6 +50,8 @@ A relationship between two or more entities. A Connection may be purely visual o
 
 Semantic meaning should be additive; users can draw a line without naming its ontology.
 
+The current prototype implements this low-structure starting point. Selecting two Board entities exposes a Connect action that creates a persisted, selectable visual relationship. The Connection follows both endpoints and is removed coherently when an endpoint is deleted. Semantic labels and endpoint editing remain deferred.
+
 ### Frame
 
 A bounded region of the board with a purpose. A Frame can represent a question, work area, system, presentation step, agent assignment, or creation boundary.

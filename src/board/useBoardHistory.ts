@@ -90,6 +90,9 @@ function loadItems(storageKey: string): BoardItem[] {
           typeof candidate.height === "number"
         );
       }
+      if (candidate.type === "connection") {
+        return typeof candidate.fromId === "string" && typeof candidate.toId === "string";
+      }
       return (
         candidate.type === "frame" &&
         typeof candidate.width === "number" &&

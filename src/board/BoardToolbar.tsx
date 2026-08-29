@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type CanvasTool = "select" | "hand";
+export type CanvasTool = "select" | "hand" | "lasso";
 
 interface BoardToolbarProps {
   activeTool: CanvasTool;
@@ -48,6 +48,14 @@ export function BoardToolbar({
         onClick={() => onSelectTool("hand")}
       >
         <HandIcon />
+      </ToolButton>
+      <ToolButton
+        label="Lasso"
+        shortcut="L"
+        active={activeTool === "lasso"}
+        onClick={() => onSelectTool("lasso")}
+      >
+        <LassoIcon />
       </ToolButton>
 
       <span className="toolbar-divider" aria-hidden="true" />
@@ -127,6 +135,27 @@ function HandIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <path d="M6.1 9.2V5.4a1.2 1.2 0 0 1 2.4 0v2.8-4a1.2 1.2 0 0 1 2.4 0v4-3a1.2 1.2 0 0 1 2.4 0v3.7-2a1.2 1.2 0 0 1 2.4 0v4.7c0 3.2-2.1 5.2-5.2 5.2H9.3c-1.8 0-3-.7-4.1-2L2.9 11a1.3 1.3 0 0 1 2-1.6z" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LassoIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d="M15.8 9.2c0 3-2.7 5.1-6.3 5.1-3.4 0-5.8-1.7-5.8-4.3 0-2.8 2.8-4.7 6.4-4.7 3.2 0 5.7 1.5 5.7 3.9Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15.8 9.2c0 3.9-1.2 6.6-3.2 6.6-1.1 0-1.8-.7-1.8-1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

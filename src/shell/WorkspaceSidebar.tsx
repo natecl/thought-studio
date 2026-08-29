@@ -273,7 +273,7 @@ function MoreIcon() {
 function PinIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M7.2 3.5h5.6M8.2 3.5l.45 4.7-2.1 2.3v1.2h6.9v-1.2l-2.1-2.3.45-4.7M10 11.7v4.8" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.1 2.8h5.8c.48 0 .77.52.52.93l-.92 1.5v3.05l2.1 2.18c.35.37.09.98-.42.98h-3.43v5.08a.75.75 0 0 1-1.5 0v-5.08H5.82c-.51 0-.77-.61-.42-.98l2.1-2.18V5.23l-.92-1.5a.61.61 0 0 1 .52-.93Z" fill="currentColor" />
     </svg>
   );
 }

@@ -325,8 +325,8 @@ button {
 }
 
 .pin-board-button svg {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
 }
 
 .board-row-shell:hover .pin-board-button,
@@ -605,6 +605,10 @@ button {
 
 .board-viewport.is-hand-tool {
   cursor: grab;
+}
+
+.board-viewport.is-lasso-tool {
+  cursor: crosshair;
 }
 
 .board-viewport.is-panning {
@@ -891,6 +895,102 @@ button {
 .board-object.is-selected::after {
   border-color: var(--studio-blue);
   box-shadow: 0 0 0 2px rgba(63, 110, 219, 0.1);
+}
+
+.selection-marquee,
+.multi-selection-bounds {
+  position: absolute;
+  z-index: 6;
+  border: 1.5px solid var(--studio-blue);
+  border-radius: 9px;
+  background: rgba(63, 110, 219, 0.07);
+  box-shadow: 0 0 0 1px rgba(255, 253, 248, 0.7) inset;
+  pointer-events: none;
+}
+
+.selection-marquee {
+  border-radius: 6px;
+}
+
+.multi-selection-bounds {
+  background: transparent;
+  box-shadow: 0 0 0 3px rgba(63, 110, 219, 0.08);
+}
+
+.selection-lasso {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.selection-lasso polygon {
+  fill: rgba(63, 110, 219, 0.075);
+  stroke: var(--studio-blue);
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.multi-selection-toolbar {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 38px;
+  padding: 4px;
+  border: 1px solid rgba(17, 17, 17, 0.15);
+  border-radius: 11px;
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: 0 10px 28px rgb(17 17 17 / 0.09), 0 2px 5px rgb(17 17 17 / 0.05);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  backdrop-filter: blur(16px) saturate(108%);
+  -webkit-backdrop-filter: blur(16px) saturate(108%);
+}
+
+.multi-selection-toolbar > span:first-child {
+  padding: 0 7px;
+  color: rgba(17, 17, 17, 0.62);
+  font-size: 12px;
+}
+
+.multi-selection-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(17, 17, 17, 0.12);
+}
+
+.multi-selection-toolbar button {
+  height: 30px;
+  padding: 0 8px;
+  color: rgba(17, 17, 17, 0.82);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.multi-selection-toolbar button:hover {
+  color: var(--black);
+  background: rgba(17, 17, 17, 0.055);
+}
+
+.multi-selection-toolbar button.is-destructive:hover {
+  color: var(--vermilion);
+  background: rgba(231, 78, 63, 0.08);
+}
+
+.multi-selection-toolbar button:focus-visible {
+  outline: 3px solid rgba(63, 110, 219, 0.24);
+  outline-offset: 1px;
 }
 
 .board-object.is-editing {

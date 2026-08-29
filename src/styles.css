@@ -884,7 +884,8 @@ button {
 }
 
 .text-object,
-.note-object {
+.note-object,
+.source-object {
   z-index: 1;
 }
 
@@ -1274,6 +1275,252 @@ button {
   color: rgba(17, 17, 17, 0.4);
 }
 
+.source-surface {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  padding: 15px 17px 14px;
+  overflow: hidden;
+  border: 1px solid rgba(17, 17, 17, 0.15);
+  border-top: 4px solid var(--studio-blue);
+  border-radius: 15px 13px 16px 12px;
+  background: var(--chalk);
+  box-shadow: 0 1px 2px rgb(17 17 17 / 0.035), 0 9px 20px rgb(17 17 17 / 0.045);
+  flex-direction: column;
+}
+
+.source-kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(17, 17, 17, 0.58);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.source-kicker time {
+  margin-left: auto;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.source-kicker-mark,
+.source-composer-mark {
+  display: block;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 9px;
+  border-radius: 62% 40% 57% 43%;
+  background: var(--studio-blue);
+  transform: rotate(-12deg);
+}
+
+.source-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 18px;
+}
+
+.source-origin-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 40px;
+  color: var(--chalk);
+  border-radius: 57% 43% 51% 45%;
+  background: var(--studio-blue);
+  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 18px;
+  font-variation-settings: "wght" 700;
+  font-weight: 700;
+  transform: rotate(-2deg);
+}
+
+.source-preview-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.source-preview-copy strong {
+  overflow: hidden;
+  color: var(--black);
+  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 17px;
+  font-variation-settings: "wght" 630;
+  font-weight: 630;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-preview-copy span {
+  margin-top: 3px;
+  overflow: hidden;
+  color: rgba(17, 17, 17, 0.55);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(17, 17, 17, 0.1);
+  margin-top: auto;
+}
+
+.source-provenance {
+  color: rgba(17, 17, 17, 0.5);
+  font-size: 11px;
+}
+
+.source-footer a {
+  color: var(--black);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.source-footer a:hover,
+.source-footer a:focus-visible {
+  color: var(--studio-blue);
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.source-composer {
+  position: absolute;
+  z-index: 24;
+  top: 84px;
+  left: 50%;
+  display: flex;
+  width: min(368px, calc(100vw - 32px));
+  padding: 17px;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  border-top: 4px solid var(--studio-blue);
+  border-radius: 15px 13px 16px 12px;
+  background: var(--chalk);
+  box-shadow: 0 18px 48px rgb(17 17 17 / 0.11), 0 3px 8px rgb(17 17 17 / 0.05);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  flex-direction: column;
+}
+
+.workspace.is-sidebar-open .source-composer {
+  left: calc(50% + (var(--sidebar-width) / 2));
+}
+
+.source-composer-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.source-composer-heading strong,
+.source-composer-heading span {
+  display: block;
+}
+
+.source-composer-heading strong {
+  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 17px;
+  font-variation-settings: "wght" 650;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.source-composer-heading span {
+  margin-top: 2px;
+  color: rgba(17, 17, 17, 0.56);
+  font-size: 12px;
+}
+
+.source-composer-mark {
+  width: 10px;
+  height: 11px;
+  margin-top: 4px;
+}
+
+.source-composer label {
+  margin: 16px 0 6px;
+  color: rgba(17, 17, 17, 0.68);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.source-composer input {
+  width: 100%;
+  height: 42px;
+  padding: 0 11px;
+  color: var(--black);
+  border: 1px solid rgba(17, 17, 17, 0.18);
+  border-radius: 9px;
+  outline: none;
+  background: #ffffff;
+}
+
+.source-composer input:focus {
+  border-color: var(--studio-blue);
+  box-shadow: 0 0 0 3px rgba(63, 110, 219, 0.12);
+}
+
+.source-composer-hint,
+.source-composer-error {
+  min-height: 16px;
+  margin-top: 6px;
+  color: rgba(17, 17, 17, 0.48);
+  font-size: 11px;
+}
+
+.source-composer-error {
+  color: var(--vermilion);
+}
+
+.source-composer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.source-composer-actions button {
+  height: 34px;
+  padding: 0 11px;
+  color: rgba(17, 17, 17, 0.76);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.source-composer-actions button:hover {
+  color: var(--black);
+  background: rgba(17, 17, 17, 0.055);
+}
+
+.source-composer-actions button.is-primary {
+  color: var(--chalk);
+  background: var(--black);
+}
+
+.source-composer-actions button.is-primary:hover {
+  color: var(--chalk);
+  background: rgba(17, 17, 17, 0.88);
+}
+
 .canvas-context-menu {
   position: absolute;
   z-index: 30;
@@ -1379,6 +1626,10 @@ button {
   }
 
   .workspace.is-sidebar-open .board-toolbar {
+    left: 50%;
+  }
+
+  .workspace.is-sidebar-open .source-composer {
     left: 50%;
   }
 

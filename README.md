@@ -51,13 +51,14 @@ npm run typecheck
 - Exclusive Pinned placement with retained Project ownership
 - Pan and zoom across a shared Board coordinate system
 - Contextual text and note creation
+- Universal URL Sources through paste or manual entry, with retained origin and import provenance
 - Single and multi-selection with Shift-click, marquee, and freeform lasso
 - Collective dragging, keyboard nudging, duplication, and deletion
 - First-class Frames with naming, explicit membership, collective movement, and duplication
 - Undo and redo for meaningful Object operations
 - Local Board-item persistence across reloads
 
-See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. Universal Sources, Connections, and agent participation are the next interaction milestones. The approved mockup is a visual reference; the coded interface is the product implementation.
+See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. Simple Connections, Source-linked fragments, additional Source kinds, and agent participation are the next interaction milestones. The approved mockup is a visual reference; the coded interface is the product implementation.
 
 ## Start here
 

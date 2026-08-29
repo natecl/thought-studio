@@ -889,6 +889,61 @@ button {
   z-index: 1;
 }
 
+.connection-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.connection-object {
+  pointer-events: none;
+}
+
+.connection-line,
+.connection-hit-area {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.connection-line {
+  stroke: rgba(17, 17, 17, 0.62);
+  stroke-width: 1.55;
+  pointer-events: none;
+}
+
+.connection-hit-area {
+  stroke: transparent;
+  stroke-width: 15;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.connection-endpoint {
+  fill: var(--black);
+  stroke: var(--chalk);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.connection-object.is-selected .connection-line,
+.connection-object:focus-visible .connection-line {
+  stroke: var(--studio-blue);
+  stroke-width: 2.2;
+}
+
+.connection-object.is-selected .connection-endpoint,
+.connection-object:focus-visible .connection-endpoint {
+  fill: var(--studio-blue);
+}
+
 .frame-object {
   z-index: 0;
 }

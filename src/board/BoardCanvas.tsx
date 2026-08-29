@@ -9,9 +9,10 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { BoardToolbar, type CanvasTool } from "./BoardToolbar";
+import { connectionPath } from "./connection";
 import { createUrlSource as buildUrlSource, formatSourceDate, parseSourceUrl, sourceInitial } from "./source";
 import { useBoardHistory } from "./useBoardHistory";
-import type { BoardFrame, BoardItem, BoardObjectType, BoardSource, Camera } from "./types";
+import type { BoardConnection, BoardFrame, BoardItem, BoardObjectType, BoardSource, Camera } from "./types";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
@@ -72,6 +73,10 @@ const FRAME_RESIZE_HANDLES: FrameResizeHandle[] = [
 
 function setsMatch(left: Set<string>, right: Set<string>) {
   return left.size === right.size && [...left].every((value) => right.has(value));
+}
+
+function isConnectable(item: BoardItem) {
+  return item.type !== "connection";
 }
 
 function rectangleFromPoints(start: Point, end: Point): ScreenRect {
@@ -162,8 +167,8 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     const viewportRect = viewport?.getBoundingClientRect();
     if (!viewport || !viewportRect) return new Map<string, ScreenRect>();
     const result = new Map<string, ScreenRect>();
-    viewport.querySelectorAll<HTMLElement>("[data-board-item-id]").forEach((element) => {
-      const id = element.dataset.boardItemId;
+    viewport.querySelectorAll<Element>("[data-board-item-id]").forEach((element) => {
+      const id = element.getAttribute("data-board-item-id");
       if (!id) return;
       const rect = element.getBoundingClientRect();
       result.set(id, {
@@ -181,7 +186,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const readObjectIdsInside = useCallback((bounds: ScreenRect) => {
     const itemRects = readItemRects();
     return items
-      .filter((item) => item.type !== "frame")
+      .filter((item) => item.type !== "frame" && item.type !== "connection")
       .filter((item) => {
         const rect = itemRects.get(item.id);
         if (!rect) return false;
@@ -288,7 +293,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   }, [camera, commit, items, readObjectIdsInside]);
 
   const createFrameFromSelection = useCallback(() => {
-    const childIds = [...selectedIds].filter((id) => items.some((item) => item.id === id && item.type !== "frame"));
+    const childIds = [...selectedIds].filter((id) => items.some((item) => item.id === id && item.type !== "frame" && item.type !== "connection"));
     if (childIds.length === 0) {
       setActiveTool("frame");
       setAnnouncement("Frame tool active. Drag to draw a context boundary");
@@ -322,8 +327,36 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     setAnnouncement(`Frame created around ${childIds.length} ${childIds.length === 1 ? "Object" : "Objects"}`);
   }, [camera, commit, items, readItemRects, selectedIds]);
 
+  const connectSelected = useCallback(() => {
+    const endpoints = items.filter((item) => selectedIds.has(item.id) && isConnectable(item));
+    if (endpoints.length !== 2) return;
+    const [from, to] = endpoints;
+    const existing = items.find((item): item is BoardConnection =>
+      item.type === "connection" &&
+      ((item.fromId === from.id && item.toId === to.id) || (item.fromId === to.id && item.toId === from.id)),
+    );
+    if (existing) {
+      setSelectedIds(new Set([existing.id]));
+      setAnnouncement("Connection already exists and is now selected");
+      return;
+    }
+    const connection: BoardConnection = {
+      id: crypto.randomUUID(),
+      type: "connection",
+      x: 0,
+      y: 0,
+      text: "",
+      fromId: from.id,
+      toId: to.id,
+    };
+    commit([...items, connection]);
+    setSelectedIds(new Set([connection.id]));
+    setEditingId(null);
+    setAnnouncement("Objects connected");
+  }, [commit, items, selectedIds]);
+
   const beginEditing = useCallback((item: BoardItem) => {
-    if (item.type === "source") return;
+    if (item.type === "source" || item.type === "connection") return;
     setSelectedIds(new Set([item.id]));
     setEditingId(item.id);
     setDraftText(item.text);
@@ -371,11 +404,17 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     if (selectedIds.size === 0) return;
     const count = selectedIds.size;
     const selectedItems = items.filter((item) => selectedIds.has(item.id));
+    const removedIds = new Set(selectedIds);
+    items.forEach((item) => {
+      if (item.type === "connection" && (selectedIds.has(item.fromId) || selectedIds.has(item.toId))) {
+        removedIds.add(item.id);
+      }
+    });
     commit(
       items
-        .filter((item) => !selectedIds.has(item.id))
+        .filter((item) => !removedIds.has(item.id))
         .map((item) => item.type === "frame"
-          ? { ...item, childIds: item.childIds.filter((id) => !selectedIds.has(id)) }
+          ? { ...item, childIds: item.childIds.filter((id) => !removedIds.has(id)) }
           : item),
     );
     setSelectedIds(new Set());
@@ -389,11 +428,25 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     items.forEach((item) => {
       if (item.type === "frame" && selectedIds.has(item.id)) item.childIds.forEach((id) => idsToClone.add(id));
     });
+    items.forEach((item) => {
+      if (item.type === "connection" && idsToClone.has(item.fromId) && idsToClone.has(item.toId)) {
+        idsToClone.add(item.id);
+      }
+    });
     const idMap = new Map([...idsToClone].map((id) => [id, crypto.randomUUID()]));
     const clones = items.filter((item) => idsToClone.has(item.id)).map((item): BoardItem => {
-      return item.type === "frame"
-        ? { ...item, id: idMap.get(item.id)!, x: item.x + 24, y: item.y + 24, childIds: item.childIds.map((id) => idMap.get(id) ?? id) }
-        : { ...item, id: idMap.get(item.id)!, x: item.x + 24, y: item.y + 24 };
+      if (item.type === "frame") {
+        return { ...item, id: idMap.get(item.id)!, x: item.x + 24, y: item.y + 24, childIds: item.childIds.map((id) => idMap.get(id) ?? id) };
+      }
+      if (item.type === "connection") {
+        return {
+          ...item,
+          id: idMap.get(item.id)!,
+          fromId: idMap.get(item.fromId) ?? item.fromId,
+          toId: idMap.get(item.toId) ?? item.toId,
+        };
+      }
+      return { ...item, id: idMap.get(item.id)!, x: item.x + 24, y: item.y + 24 };
     });
     commit([...items, ...clones]);
     setSelectedIds(new Set([...selectedIds].map((id) => idMap.get(id)!).filter(Boolean)));
@@ -412,7 +465,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const nudgeSelected = useCallback((x: number, y: number) => {
     if (selectedIds.size === 0) return;
     const movementIds = expandFrameSelection(selectedIds);
-    commit(items.map((item) => movementIds.has(item.id) ? { ...item, x: item.x + x, y: item.y + y } : item));
+    commit(items.map((item) => movementIds.has(item.id) && item.type !== "connection" ? { ...item, x: item.x + x, y: item.y + y } : item));
     setAnnouncement(`${selectedIds.size} ${selectedIds.size === 1 ? "Object" : "Objects"} moved`);
   }, [commit, expandFrameSelection, items, selectedIds]);
 
@@ -623,7 +676,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       }
       if (event.key === "Enter" && selectedIds.size === 1) {
         const item = items.find((candidate) => candidate.id === [...selectedIds][0]);
-        if (item && item.type !== "source") beginEditing(item);
+        if (item && item.type !== "source" && item.type !== "connection") beginEditing(item);
         return;
       }
       if (selectedIds.size > 0 && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
@@ -746,6 +799,23 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     setContextMenu({ screenX: Math.min(event.clientX - rect.left, rect.width - 210), screenY: Math.min(event.clientY - rect.top, rect.height - 220), worldX: point.x, worldY: point.y });
   };
 
+  const selectConnection = (event: ReactPointerEvent<SVGPathElement>, connection: BoardConnection) => {
+    if (event.button !== 0 || activeTool !== "select" || spacePressed) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setContextMenu(null);
+    setEditingId(null);
+    if (event.shiftKey) {
+      const next = new Set(selectedIds);
+      if (next.has(connection.id)) next.delete(connection.id); else next.add(connection.id);
+      setSelectedIds(next);
+      setAnnouncement(`${next.size} ${next.size === 1 ? "Object" : "Objects"} selected`);
+      return;
+    }
+    setSelectedIds(new Set([connection.id]));
+    setAnnouncement("Connection selected");
+  };
+
   const beginItemDrag = (event: ReactPointerEvent<HTMLDivElement>, item: BoardItem) => {
     if (event.button !== 0 || editingId === item.id || activeTool !== "select" || spacePressed) return;
     event.preventDefault();
@@ -816,6 +886,8 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     ? constrainedRectangleFromPoints(framePlacementDraft.start, framePlacementDraft.current)
     : null;
   const selectionToolbarTop = selectionBounds ? (selectionBounds.top > 76 ? selectionBounds.top - 48 : selectionBounds.bottom + 10) : 0;
+  const canConnectSelection = items.filter((item) => selectedIds.has(item.id) && isConnectable(item)).length === 2 &&
+    [...selectedIds].every((id) => items.find((item) => item.id === id)?.type !== "connection");
 
   return (
     <section
@@ -837,7 +909,33 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     >
       <div className="canvas-field" aria-hidden="true" style={{ backgroundPosition: `${camera.x + 1}px ${camera.y + 1}px`, backgroundSize: `${24 * camera.scale}px ${24 * camera.scale}px` }} />
       <div className="canvas-world" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
-        {items.map((item) => {
+        <svg className="connection-layer" role="group" aria-label="Board Connections">
+          {items.filter((item): item is BoardConnection => item.type === "connection").map((connection) => {
+            const path = connectionPath(connection, items);
+            if (!path) return null;
+            const from = items.find((item) => item.id === connection.fromId);
+            const to = items.find((item) => item.id === connection.toId);
+            const selected = selectedIds.has(connection.id);
+            return (
+              <g
+                key={connection.id}
+                data-board-item
+                data-board-item-id={connection.id}
+                className={`connection-object${selected ? " is-selected" : ""}`}
+                role="group"
+                aria-label={`Connection from ${from?.text || from?.type || "Object"} to ${to?.text || to?.type || "Object"}${selected ? ", selected" : ""}`}
+                tabIndex={0}
+                onFocus={() => setSelectedIds(new Set([connection.id]))}
+              >
+                <path className="connection-hit-area" d={path.d} onPointerDown={(event) => selectConnection(event, connection)} />
+                <path className="connection-line" d={path.d} />
+                <circle className="connection-endpoint" cx={path.start.x} cy={path.start.y} r="3" />
+                <circle className="connection-endpoint" cx={path.end.x} cy={path.end.y} r="3" />
+              </g>
+            );
+          })}
+        </svg>
+        {items.filter((item) => item.type !== "connection").map((item) => {
           const selected = selectedIds.has(item.id);
           const editing = editingId === item.id;
           return (
@@ -958,6 +1056,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
           <div className="multi-selection-toolbar" role="toolbar" aria-label={`${selectedIds.size} selected Objects`} style={{ left: selectionBounds.left + selectionBounds.width / 2, top: selectionToolbarTop }} onPointerDown={(event) => event.stopPropagation()}>
             <span>{selectedIds.size} selected</span>
             <span className="multi-selection-divider" aria-hidden="true" />
+            {canConnectSelection && <button type="button" onClick={connectSelected} title="Connect selected Objects">Connect</button>}
             <button type="button" onClick={createFrameFromSelection} title="Create Frame (F)">Frame</button>
             <button type="button" onClick={duplicateSelected} title="Duplicate (⌘D)">Duplicate</button>
             <button className="is-destructive" type="button" onClick={deleteSelected} title="Delete">Delete</button>

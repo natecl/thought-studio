@@ -1,6 +1,6 @@
 export type BoardObjectType = "text" | "note";
 export type BoardSourceKind = "url" | "image" | "file";
-export type BoardItemType = BoardObjectType | "source" | "frame";
+export type BoardItemType = BoardObjectType | "source" | "connection" | "frame";
 
 interface BoardEntityBase {
   id: string;
@@ -27,6 +27,12 @@ export interface BoardSource extends BoardEntityBase {
   previewDataUrl?: string;
 }
 
+export interface BoardConnection extends BoardEntityBase {
+  type: "connection";
+  fromId: string;
+  toId: string;
+}
+
 export interface BoardFrame extends BoardEntityBase {
   type: "frame";
   width: number;
@@ -34,7 +40,7 @@ export interface BoardFrame extends BoardEntityBase {
   childIds: string[];
 }
 
-export type BoardItem = BoardObject | BoardSource | BoardFrame;
+export type BoardItem = BoardObject | BoardSource | BoardConnection | BoardFrame;
 
 export interface Camera {
   x: number;

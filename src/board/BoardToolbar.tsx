@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type CanvasTool = "select" | "hand" | "lasso";
+export type CanvasTool = "select" | "hand" | "lasso" | "frame";
 
 interface BoardToolbarProps {
   activeTool: CanvasTool;
@@ -8,6 +8,7 @@ interface BoardToolbarProps {
   canUndo: boolean;
   zoomPercent: number;
   onAddNote: () => void;
+  onAddFrame: () => void;
   onAddText: () => void;
   onRedo: () => void;
   onResetView: () => void;
@@ -22,6 +23,7 @@ export function BoardToolbar({
   canRedo,
   canUndo,
   zoomPercent,
+  onAddFrame,
   onAddNote,
   onAddText,
   onRedo,
@@ -65,6 +67,9 @@ export function BoardToolbar({
       </ToolButton>
       <ToolButton label="Add note" shortcut="N" onClick={onAddNote}>
         <NoteIcon />
+      </ToolButton>
+      <ToolButton label="Add frame" shortcut="F" active={activeTool === "frame"} onClick={onAddFrame}>
+        <FrameIcon />
       </ToolButton>
 
       <span className="toolbar-divider" aria-hidden="true" />
@@ -173,6 +178,15 @@ function NoteIcon() {
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <path d="M4 3.7h12v9.5L12.7 16H4z" fill="var(--sun)" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
       <path d="M12.7 16v-2.8H16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function FrameIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <rect x="3.4" y="5.2" width="13.2" height="11.1" rx="1.6" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M5.7 5.2V3.7h5.6" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

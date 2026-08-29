@@ -111,6 +111,7 @@ Priorities use **P0** for the first testable product, **P1** for the next valida
 - **P1:** Notion document linking or import with permission-aware provenance.
 - **P1:** Webpage and PDF extraction with stable references.
 - **P2:** Live synchronization with supported source applications.
+- **P2:** Support an extensible Source contract for additional digitized or codified material without creating separate product centers.
 
 ### 8.4 Spatial organization
 
@@ -141,6 +142,7 @@ Priorities use **P0** for the first testable product, **P1** for the next valida
 - **P1:** Permit multiple named agents with distinct roles.
 - **P1:** Show visible agent-to-agent delegation.
 - **P2:** Allow scoped external actions through connected tools.
+- **P2:** Provide a permission-scoped API through which external agents can read Board or Frame context and propose attributable, reversible changes using the same entity model as the visible product.
 
 ### 8.7 Creation
 

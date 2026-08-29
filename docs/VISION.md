@@ -35,6 +35,8 @@ A person enters a quiet, blank spatial environment and begins immediately. They 
 
 The board accepts almost anything without forcing it into a predetermined workflow. A YouTube video can sit beside a handwritten observation. A Notion document can sit inside a product system. A collaborator can draw a counterargument. An agent can research a bounded question and place findings in an assigned region.
 
+Anything that can be represented digitally should be able to arrive as material with a legible origin rather than requiring a new product center. Over time, the same permission-aware Board and Frame context should be available to people, native agents, and external agents through an API, so every participant works from one shared model instead of copied context packets.
+
 Every participant works on the same visible model. Agent activity has a cursor, scope, history, and identity. Sources retain provenance. Connections can remain informal or become semantic when useful.
 
 Over time, fragments become clusters. Clusters become relationships. Relationships become systems. A frame around part of the board can become a product specification, presentation, essay, lesson, architecture, or other creation. That creation remains connected to the board that produced it.

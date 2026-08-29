@@ -1,7 +1,7 @@
 # Interaction prototype foundation
 
-- **Status:** Milestone 2 implemented
-- **Date:** 2026-08-28
+- **Status:** Milestone 3 implemented
+- **Date:** 2026-08-29
 - **Initial input priority:** Desktop pointer and keyboard
 
 ## Purpose
@@ -19,13 +19,18 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 | Choose Lasso | Lasso in the tool dock | `L` |
 | Add text | Double-click; right-click → Add text | `T` |
 | Add note | Right-click → Add note | `N` |
+| Add an empty Frame | Choose Frame, then drag a crop-like boundary; right-click → Add Frame uses a default size | `F`, then drag |
 | Select one | Click an Object | Tab to an Object |
 | Toggle selection | Shift-click an Object | — |
 | Select a rectangular area | Drag across empty Board space with Select | — |
 | Select a freeform area | Draw around Objects with Lasso | `L`, then draw |
 | Select everything | — | Command/Control-A |
+| Frame a selection | Select Objects, then choose Frame in the selection toolbar | `F` |
 | Move | Drag any selected Object to move the selection | Arrow keys; Shift-arrow moves 10 px |
+| Move a Frame | Drag the Frame boundary to move it and its contained Objects | Arrow keys; Shift-arrow moves 10 px |
+| Resize a Frame | Drag any selected Frame's edge or corner handle | — |
 | Edit | Double-click an Object | Enter |
+| Rename a Frame | Double-click its title | Select it, then Enter |
 | Finish editing | Click away | Command-Enter or Control-Enter |
 | Duplicate | Use the multi-selection toolbar | Command/Control-D |
 | Delete | Use the multi-selection toolbar | Delete or Backspace |
@@ -41,17 +46,23 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Multi-selection has one shared boundary and one contextual toolbar while preserving each Object's individual identity.
 - Selected Objects move, nudge, duplicate, and delete as one reversible operation.
 - Marquee selection uses forgiving intersection; freeform lasso uses each Object's visual center.
+- A Frame is a first-class context boundary with a title, spatial bounds, and explicit Object membership.
+- Creating a Frame around selected Objects reassigns them from any previous Frame; nested Frames are deferred.
+- Moving or duplicating a Frame includes its contained Objects. Removing a Frame preserves those Objects on the Board.
+- Frame placement begins as an adjustable crop-like rectangle. A selected Frame exposes four edge and four corner handles; resizing changes the context boundary without scaling contained Objects.
+- Directly dragging an Object into or out of a Frame updates its membership to match the visible spatial model.
+- Finishing a Frame placement or resize reconciles membership from each Object's visual center so the visible boundary and stored context agree.
 - Board items persist locally across reloads for this prototype milestone.
 - The implementation uses the selected brand tokens and exact Thought Bloom asset.
 
 ## Deliberately deferred
 
-- Resize and rotation handles
+- Rotation handles
 - Ink and erasing
-- Shapes, Connections, and Frames
+- Shapes and Connections
 - Image and URL Sources
 - Server persistence and synchronization
 - Multiplayer presence
 - Agent selection and proposal workflows
 
-The next milestone should add Frames before Sources or agent participation so spatial organization remains primary.
+The next milestone should add a universal Source Object and simple Connections before agent participation so imported context remains visibly grounded in the Board.

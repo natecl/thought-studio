@@ -23,9 +23,9 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 | Add image or file Source | Drop files on the Board; Add Source → Choose an image or file | — |
 | Add an empty Frame | Choose Frame, then drag a crop-like boundary; right-click → Add Frame uses a default size | `F`, then drag |
 | Select one | Click an Object | Tab to an Object |
-| Toggle selection | Shift-click an Object | — |
+| Toggle selection | Shift-, Command-, or Control-click an Object | — |
 | Select a rectangular area | Drag across empty Board space with Select | — |
-| Select a freeform area | Draw around Objects with Lasso | `L`, then draw |
+| Select a freehand area | With Lasso, draw a loop around the Objects | `L`, then draw a loop |
 | Select everything | — | Command/Control-A |
 | Connect two entities | Select exactly two Board entities, then choose Connect in the selection toolbar | — |
 | Create a Source fragment | Select a Source, then choose Note or Quote in its contextual toolbar | — |
@@ -63,7 +63,8 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Object creation, editing, movement, and deletion are meaningful undoable operations.
 - Multi-selection has one shared boundary and one contextual toolbar while preserving each Object's individual identity.
 - Selected Objects move, nudge, duplicate, and delete as one reversible operation.
-- Marquee selection uses forgiving intersection; freeform lasso uses each Object's visual center.
+- Marquee selection uses forgiving intersection. Lasso selection follows the freehand loop the participant draws and includes Objects whose visual centers fall inside it.
+- The lasso renders only the participant's pointer trail while drawing; its inferred closing edge is never shown across the middle of the loop.
 - A Frame is a first-class context boundary with a title, spatial bounds, and explicit Object membership.
 - Creating a Frame around selected Objects reassigns them from any previous Frame; nested Frames are deferred.
 - Moving or duplicating a Frame includes its contained Objects. Removing a Frame preserves those Objects on the Board.

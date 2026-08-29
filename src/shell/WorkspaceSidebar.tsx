@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import bloomMark from "../../docs/design/brand/thought-bloom-mark-selected.png";
+import { boardPlacement } from "./boardPlacement";
 
 export interface BoardSummary {
   id: string;
@@ -39,6 +40,8 @@ export function WorkspaceSidebar({
     () => Array.from(new Set(boards.flatMap((board) => (board.project ? [board.project] : [])))),
     [boards],
   );
+  const pinnedBoards = filteredBoards.filter((board) => boardPlacement(board) === "pinned");
+  const recentBoards = filteredBoards.filter((board) => boardPlacement(board) === "recent");
 
   const toggleProject = (project: string) => {
     setExpandedProjects((current) => {
@@ -81,7 +84,7 @@ export function WorkspaceSidebar({
 
       <nav className="sidebar-navigation" aria-label="Boards and projects">
         <SidebarSection title="Pinned">
-          {filteredBoards.filter((board) => board.pinned).map((board) => (
+          {pinnedBoards.map((board) => (
             <BoardRow
               key={`pinned-${board.id}`}
               board={board}
@@ -92,22 +95,25 @@ export function WorkspaceSidebar({
           ))}
         </SidebarSection>
 
-        <SidebarSection title="Recents">
-          {filteredBoards.filter((board) => board.recent && !board.pinned).map((board) => (
-            <BoardRow
-              key={`recent-${board.id}`}
-              board={board}
-              active={board.id === activeBoardId}
-              onSelect={onSelectBoard}
-              onTogglePin={onTogglePin}
-            />
-          ))}
-        </SidebarSection>
+        {recentBoards.length > 0 && (
+          <SidebarSection title="Recents">
+            {recentBoards.map((board) => (
+              <BoardRow
+                key={`recent-${board.id}`}
+                board={board}
+                active={board.id === activeBoardId}
+                onSelect={onSelectBoard}
+                onTogglePin={onTogglePin}
+              />
+            ))}
+          </SidebarSection>
+        )}
 
         <SidebarSection title="Projects" action={<button type="button" aria-label="Create project">+</button>}>
           {projects.map((project) => {
             const isExpanded = expandedProjects.has(project);
-            const projectBoards = filteredBoards.filter((board) => board.project === project && !board.pinned);
+            const projectBoards = filteredBoards.filter((board) =>
+              board.project === project && boardPlacement(board) === "project");
             if (query && projectBoards.length === 0) return null;
 
             return (

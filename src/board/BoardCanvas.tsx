@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -14,43 +15,71 @@ const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
 const DEFAULT_CAMERA: Camera = { x: 0, y: 0, scale: 1 };
 
-interface ContextMenuState {
-  screenX: number;
-  screenY: number;
-  worldX: number;
-  worldY: number;
-}
-
-interface PanGesture {
-  pointerId: number;
-  startClientX: number;
-  startClientY: number;
-  startCamera: Camera;
-}
-
+interface Point { x: number; y: number }
+interface ScreenRect { left: number; top: number; right: number; bottom: number; width: number; height: number }
+interface ContextMenuState { screenX: number; screenY: number; worldX: number; worldY: number }
+interface PanGesture { pointerId: number; startClientX: number; startClientY: number; startCamera: Camera }
 interface ItemDragGesture {
-  id: string;
+  ids: Set<string>;
   pointerId: number;
   startClientX: number;
   startClientY: number;
-  originX: number;
-  originY: number;
   before: BoardItem[];
   moved: boolean;
 }
+interface SelectionGesture {
+  pointerId: number;
+  mode: "marquee" | "lasso";
+  base: Set<string>;
+  start: Point;
+  points: Point[];
+  moved: boolean;
+}
+interface SelectionDraft { mode: "marquee" | "lasso"; start: Point; current: Point; points: Point[] }
+interface BoardCanvasProps { boardId: string; title: string }
 
-interface BoardCanvasProps {
-  boardId: string;
-  title: string;
+function setsMatch(left: Set<string>, right: Set<string>) {
+  return left.size === right.size && [...left].every((value) => right.has(value));
+}
+
+function rectangleFromPoints(start: Point, end: Point): ScreenRect {
+  const left = Math.min(start.x, end.x);
+  const top = Math.min(start.y, end.y);
+  const right = Math.max(start.x, end.x);
+  const bottom = Math.max(start.y, end.y);
+  return { left, top, right, bottom, width: right - left, height: bottom - top };
+}
+
+function rectanglesIntersect(left: ScreenRect, right: ScreenRect) {
+  return left.left <= right.right && left.right >= right.left && left.top <= right.bottom && left.bottom >= right.top;
+}
+
+function pointInsidePolygon(point: Point, polygon: Point[]) {
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const currentPoint = polygon[index];
+    const previousPoint = polygon[previous];
+    const crosses =
+      currentPoint.y > point.y !== previousPoint.y > point.y &&
+      point.x <
+        ((previousPoint.x - currentPoint.x) * (point.y - currentPoint.y)) /
+          (previousPoint.y - currentPoint.y || Number.EPSILON) +
+          currentPoint.x;
+    if (crosses) inside = !inside;
+  }
+  return inside;
 }
 
 export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const viewportRef = useRef<HTMLElement>(null);
   const panRef = useRef<PanGesture | null>(null);
   const itemDragRef = useRef<ItemDragGesture | null>(null);
+  const selectionGestureRef = useRef<SelectionGesture | null>(null);
   const { items, commit, replace, checkpoint, undo, redo, canUndo, canRedo } = useBoardHistory(boardId);
   const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectionDraft, setSelectionDraft] = useState<SelectionDraft | null>(null);
+  const [selectionBounds, setSelectionBounds] = useState<ScreenRect | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftText, setDraftText] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -59,50 +88,67 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const [isPanning, setIsPanning] = useState(false);
   const [announcement, setAnnouncement] = useState("Empty board");
 
-  const screenToWorld = useCallback(
-    (clientX: number, clientY: number) => {
-      const rect = viewportRef.current?.getBoundingClientRect();
-      if (!rect) return { x: 0, y: 0 };
-      return {
-        x: (clientX - rect.left - camera.x) / camera.scale,
-        y: (clientY - rect.top - camera.y) / camera.scale,
-      };
-    },
-    [camera],
-  );
+  const screenToWorld = useCallback((clientX: number, clientY: number) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: (clientX - rect.left - camera.x) / camera.scale,
+      y: (clientY - rect.top - camera.y) / camera.scale,
+    };
+  }, [camera]);
 
-  const createItem = useCallback(
-    (type: BoardItemType, point: { x: number; y: number }) => {
-      const id = crypto.randomUUID();
-      const item: BoardItem = {
-        id,
-        type,
-        x: type === "note" ? point.x - 110 : point.x,
-        y: type === "note" ? point.y - 82 : point.y,
-        text: "",
-      };
+  const clientToViewport = useCallback((clientX: number, clientY: number): Point => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }, []);
 
-      commit([...items, item]);
-      setSelectedId(id);
-      setEditingId(id);
-      setDraftText("");
-      setContextMenu(null);
-      setAnnouncement(type === "note" ? "Note added" : "Text added");
-    },
-    [commit, items],
-  );
+  const readItemRects = useCallback(() => {
+    const viewport = viewportRef.current;
+    const viewportRect = viewport?.getBoundingClientRect();
+    if (!viewport || !viewportRect) return new Map<string, ScreenRect>();
+    const result = new Map<string, ScreenRect>();
+    viewport.querySelectorAll<HTMLElement>("[data-board-item-id]").forEach((element) => {
+      const id = element.dataset.boardItemId;
+      if (!id) return;
+      const rect = element.getBoundingClientRect();
+      result.set(id, {
+        left: rect.left - viewportRect.left,
+        top: rect.top - viewportRect.top,
+        right: rect.right - viewportRect.left,
+        bottom: rect.bottom - viewportRect.top,
+        width: rect.width,
+        height: rect.height,
+      });
+    });
+    return result;
+  }, []);
 
-  const createAtViewportCenter = useCallback(
-    (type: BoardItemType) => {
-      const rect = viewportRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      createItem(type, screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2));
-    },
-    [createItem, screenToWorld],
-  );
+  const createItem = useCallback((type: BoardItemType, point: Point) => {
+    const id = crypto.randomUUID();
+    const item: BoardItem = {
+      id,
+      type,
+      x: type === "note" ? point.x - 110 : point.x,
+      y: type === "note" ? point.y - 82 : point.y,
+      text: "",
+    };
+    commit([...items, item]);
+    setSelectedIds(new Set([id]));
+    setEditingId(id);
+    setDraftText("");
+    setContextMenu(null);
+    setAnnouncement(type === "note" ? "Note added" : "Text added");
+  }, [commit, items]);
+
+  const createAtViewportCenter = useCallback((type: BoardItemType) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    createItem(type, screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2));
+  }, [createItem, screenToWorld]);
 
   const beginEditing = useCallback((item: BoardItem) => {
-    setSelectedId(item.id);
+    setSelectedIds(new Set([item.id]));
     setEditingId(item.id);
     setDraftText(item.text);
   }, []);
@@ -114,16 +160,14 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       setEditingId(null);
       return;
     }
-
     if (!draftText.trim()) {
       commit(items.filter((candidate) => candidate.id !== editingId));
-      setSelectedId(null);
-      setAnnouncement("Empty item removed");
+      setSelectedIds(new Set());
+      setAnnouncement("Empty Object removed");
     } else if (draftText !== item.text) {
-      commit(items.map((candidate) => (candidate.id === editingId ? { ...candidate, text: draftText } : candidate)));
-      setAnnouncement("Item updated");
+      commit(items.map((candidate) => candidate.id === editingId ? { ...candidate, text: draftText } : candidate));
+      setAnnouncement("Object updated");
     }
-
     setEditingId(null);
   }, [commit, draftText, editingId, items]);
 
@@ -132,28 +176,39 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     const item = items.find((candidate) => candidate.id === editingId);
     if (item && !item.text) {
       commit(items.filter((candidate) => candidate.id !== editingId));
-      setSelectedId(null);
+      setSelectedIds(new Set());
     }
     setEditingId(null);
     setDraftText("");
   }, [commit, editingId, items]);
 
   const deleteSelected = useCallback(() => {
-    if (!selectedId) return;
-    commit(items.filter((item) => item.id !== selectedId));
-    setSelectedId(null);
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    commit(items.filter((item) => !selectedIds.has(item.id)));
+    setSelectedIds(new Set());
     setEditingId(null);
-    setAnnouncement("Item deleted");
-  }, [commit, items, selectedId]);
+    setAnnouncement(`${count} ${count === 1 ? "Object" : "Objects"} deleted`);
+  }, [commit, items, selectedIds]);
 
-  const nudgeSelected = useCallback(
-    (x: number, y: number) => {
-      if (!selectedId) return;
-      commit(items.map((item) => (item.id === selectedId ? { ...item, x: item.x + x, y: item.y + y } : item)));
-      setAnnouncement("Item moved");
-    },
-    [commit, items, selectedId],
-  );
+  const duplicateSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    const cloneIds = new Set<string>();
+    const clones = items.filter((item) => selectedIds.has(item.id)).map((item) => {
+      const id = crypto.randomUUID();
+      cloneIds.add(id);
+      return { ...item, id, x: item.x + 24, y: item.y + 24 };
+    });
+    commit([...items, ...clones]);
+    setSelectedIds(cloneIds);
+    setAnnouncement(`${clones.length} ${clones.length === 1 ? "Object" : "Objects"} duplicated`);
+  }, [commit, items, selectedIds]);
+
+  const nudgeSelected = useCallback((x: number, y: number) => {
+    if (selectedIds.size === 0) return;
+    commit(items.map((item) => selectedIds.has(item.id) ? { ...item, x: item.x + x, y: item.y + y } : item));
+    setAnnouncement(`${selectedIds.size} ${selectedIds.size === 1 ? "Object" : "Objects"} moved`);
+  }, [commit, items, selectedIds]);
 
   const zoomAtViewportCenter = useCallback((factor: number) => {
     const rect = viewportRef.current?.getBoundingClientRect();
@@ -164,13 +219,26 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       const worldX = (pointerX - current.x) / current.scale;
       const worldY = (pointerY - current.y) / current.scale;
       const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, current.scale * factor));
-      return {
-        x: pointerX - worldX * nextScale,
-        y: pointerY - worldY * nextScale,
-        scale: nextScale,
-      };
+      return { x: pointerX - worldX * nextScale, y: pointerY - worldY * nextScale, scale: nextScale };
     });
   }, []);
+
+  const selectWithinGesture = useCallback((gesture: SelectionGesture) => {
+    const next = new Set(gesture.base);
+    const itemRects = readItemRects();
+    if (gesture.mode === "marquee") {
+      const selectionRect = rectangleFromPoints(gesture.start, gesture.points.at(-1) ?? gesture.start);
+      itemRects.forEach((rect, id) => {
+        if (rectanglesIntersect(selectionRect, rect)) next.add(id);
+      });
+    } else if (gesture.points.length >= 3) {
+      itemRects.forEach((rect, id) => {
+        const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        if (pointInsidePolygon(center, gesture.points)) next.add(id);
+      });
+    }
+    setSelectedIds(next);
+  }, [readItemRects]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -183,102 +251,86 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   }, [editingId]);
 
   useEffect(() => {
+    const validIds = new Set(items.map((item) => item.id));
+    const validSelection = new Set([...selectedIds].filter((id) => validIds.has(id)));
+    if (!setsMatch(validSelection, selectedIds)) setSelectedIds(validSelection);
+  }, [items, selectedIds]);
+
+  useLayoutEffect(() => {
+    if (selectedIds.size < 2) {
+      setSelectionBounds(null);
+      return;
+    }
+    const measure = () => {
+      const selectedRects = [...readItemRects()].filter(([id]) => selectedIds.has(id)).map(([, rect]) => rect);
+      if (selectedRects.length < 2) {
+        setSelectionBounds(null);
+        return;
+      }
+      const left = Math.min(...selectedRects.map((rect) => rect.left));
+      const top = Math.min(...selectedRects.map((rect) => rect.top));
+      const right = Math.max(...selectedRects.map((rect) => rect.right));
+      const bottom = Math.max(...selectedRects.map((rect) => rect.bottom));
+      setSelectionBounds({ left, top, right, bottom, width: right - left, height: bottom - top });
+    };
+    const frame = requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measure);
+    };
+  }, [camera, items, readItemRects, selectedIds]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      const isTyping =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        target?.isContentEditable;
-
+      const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement || target?.isContentEditable;
       if (event.key === "Escape") {
         setContextMenu(null);
+        setSelectionDraft(null);
+        selectionGestureRef.current = null;
         if (editingId) cancelEditing();
-        else setSelectedId(null);
+        else setSelectedIds(new Set());
         return;
       }
-
       if (isTyping) return;
-
       const command = event.metaKey || event.ctrlKey;
+      if (command && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        setSelectedIds(new Set(items.map((item) => item.id)));
+        setAnnouncement(`${items.length} ${items.length === 1 ? "Object" : "Objects"} selected`);
+        return;
+      }
+      if (command && event.key.toLowerCase() === "d" && selectedIds.size > 0) {
+        event.preventDefault();
+        duplicateSelected();
+        return;
+      }
       if (command && event.key.toLowerCase() === "z") {
         event.preventDefault();
-        if (event.shiftKey) {
-          redo();
-          setAnnouncement("Redone");
-        } else {
-          undo();
-          setAnnouncement("Undone");
-        }
+        if (event.shiftKey) { redo(); setAnnouncement("Redone"); }
+        else { undo(); setAnnouncement("Undone"); }
         return;
       }
-
-      if (event.key === " ") {
-        event.preventDefault();
-        setSpacePressed(true);
-        return;
+      if (event.key === " ") { event.preventDefault(); setSpacePressed(true); return; }
+      if (!command && event.key.toLowerCase() === "v") { event.preventDefault(); setActiveTool("select"); setAnnouncement("Select tool active"); return; }
+      if (!command && event.key.toLowerCase() === "h") { event.preventDefault(); setActiveTool("hand"); setAnnouncement("Pan tool active"); return; }
+      if (!command && event.key.toLowerCase() === "l") { event.preventDefault(); setActiveTool("lasso"); setAnnouncement("Lasso tool active"); return; }
+      if (!command && event.key.toLowerCase() === "t") { event.preventDefault(); createAtViewportCenter("text"); return; }
+      if (!command && event.key.toLowerCase() === "n") { event.preventDefault(); createAtViewportCenter("note"); return; }
+      if (event.key === "+" || event.key === "=") { event.preventDefault(); zoomAtViewportCenter(1.12); setAnnouncement("Zoomed in"); return; }
+      if (event.key === "-") { event.preventDefault(); zoomAtViewportCenter(1 / 1.12); setAnnouncement("Zoomed out"); return; }
+      if (event.key === "0") { event.preventDefault(); setCamera(DEFAULT_CAMERA); setAnnouncement("View reset"); return; }
+      if ((event.key === "Delete" || event.key === "Backspace") && selectedIds.size > 0) {
+        event.preventDefault(); deleteSelected(); return;
       }
-
-      if (!command && event.key.toLowerCase() === "v") {
-        event.preventDefault();
-        setActiveTool("select");
-        setAnnouncement("Select tool active");
-        return;
-      }
-
-      if (!command && event.key.toLowerCase() === "h") {
-        event.preventDefault();
-        setActiveTool("hand");
-        setAnnouncement("Pan tool active");
-        return;
-      }
-
-      if (!command && event.key.toLowerCase() === "t") {
-        event.preventDefault();
-        createAtViewportCenter("text");
-        return;
-      }
-
-      if (!command && event.key.toLowerCase() === "n") {
-        event.preventDefault();
-        createAtViewportCenter("note");
-        return;
-      }
-
-      if (event.key === "+" || event.key === "=") {
-        event.preventDefault();
-        zoomAtViewportCenter(1.12);
-        setAnnouncement("Zoomed in");
-        return;
-      }
-
-      if (event.key === "-") {
-        event.preventDefault();
-        zoomAtViewportCenter(1 / 1.12);
-        setAnnouncement("Zoomed out");
-        return;
-      }
-
-      if (event.key === "0") {
-        event.preventDefault();
-        setCamera(DEFAULT_CAMERA);
-        setAnnouncement("View reset");
-        return;
-      }
-
-      if ((event.key === "Delete" || event.key === "Backspace") && selectedId) {
-        event.preventDefault();
-        deleteSelected();
-        return;
-      }
-
-      if (event.key === "Enter" && selectedId) {
-        const item = items.find((candidate) => candidate.id === selectedId);
+      if (event.key === "Enter" && selectedIds.size === 1) {
+        const item = items.find((candidate) => candidate.id === [...selectedIds][0]);
         if (item) beginEditing(item);
         return;
       }
-
-      if (selectedId && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+      if (selectedIds.size > 0 && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
         event.preventDefault();
         const amount = event.shiftKey ? 10 : 1;
         if (event.key === "ArrowLeft") nudgeSelected(-amount, 0);
@@ -287,40 +339,17 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         if (event.key === "ArrowDown") nudgeSelected(0, amount);
       }
     };
-
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === " ") {
-        setSpacePressed(false);
-        setIsPanning(false);
-        panRef.current = null;
-      }
+      if (event.key === " ") { setSpacePressed(false); setIsPanning(false); panRef.current = null; }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, [
-    activeTool,
-    beginEditing,
-    cancelEditing,
-    createAtViewportCenter,
-    deleteSelected,
-    editingId,
-    items,
-    nudgeSelected,
-    redo,
-    selectedId,
-    undo,
-    zoomAtViewportCenter,
-  ]);
+    return () => { window.removeEventListener("keydown", handleKeyDown); window.removeEventListener("keyup", handleKeyUp); };
+  }, [beginEditing, cancelEditing, createAtViewportCenter, deleteSelected, duplicateSelected, editingId, items, nudgeSelected, redo, selectedIds, undo, zoomAtViewportCenter]);
 
   const handleWheel = (event: ReactWheelEvent<HTMLElement>) => {
     event.preventDefault();
     setContextMenu(null);
-
     if (event.ctrlKey || event.metaKey) {
       const rect = viewportRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -329,59 +358,57 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       const worldX = (pointerX - camera.x) / camera.scale;
       const worldY = (pointerY - camera.y) / camera.scale;
       const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, camera.scale * Math.exp(-event.deltaY * 0.002)));
-
-      setCamera({
-        x: pointerX - worldX * nextScale,
-        y: pointerY - worldY * nextScale,
-        scale: nextScale,
-      });
+      setCamera({ x: pointerX - worldX * nextScale, y: pointerY - worldY * nextScale, scale: nextScale });
       return;
     }
-
-    setCamera((current) => ({
-      ...current,
-      x: current.x - event.deltaX,
-      y: current.y - event.deltaY,
-    }));
+    setCamera((current) => ({ ...current, x: current.x - event.deltaX, y: current.y - event.deltaY }));
   };
 
   const handleViewportPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     setContextMenu(null);
+    const target = event.target as Element;
     const isPanGesture = event.button === 1 || (event.button === 0 && (spacePressed || activeTool === "hand"));
-
     if (isPanGesture) {
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
-      panRef.current = {
-        pointerId: event.pointerId,
-        startClientX: event.clientX,
-        startClientY: event.clientY,
-        startCamera: camera,
-      };
+      panRef.current = { pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startCamera: camera };
       setIsPanning(true);
       return;
     }
-
-    if (event.button === 0 && event.target === event.currentTarget) {
-      setSelectedId(null);
-      if (editingId) finishEditing();
-    }
+    if (event.button !== 0 || target.closest("[data-board-item], .board-toolbar, .multi-selection-toolbar, .canvas-context-menu")) return;
+    if (editingId) finishEditing();
+    const point = clientToViewport(event.clientX, event.clientY);
+    const mode = activeTool === "lasso" ? "lasso" : "marquee";
+    const base = event.shiftKey ? new Set(selectedIds) : new Set<string>();
+    const gesture: SelectionGesture = { pointerId: event.pointerId, mode, base, start: point, points: [point], moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    selectionGestureRef.current = gesture;
+    setSelectionDraft({ mode, start: point, current: point, points: [point] });
+    setSelectedIds(base);
   };
 
   const handleViewportPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     const pan = panRef.current;
-    if (!pan || pan.pointerId !== event.pointerId) return;
-    setCamera({
-      ...pan.startCamera,
-      x: pan.startCamera.x + event.clientX - pan.startClientX,
-      y: pan.startCamera.y + event.clientY - pan.startClientY,
-    });
+    if (pan?.pointerId === event.pointerId) {
+      setCamera({ ...pan.startCamera, x: pan.startCamera.x + event.clientX - pan.startClientX, y: pan.startCamera.y + event.clientY - pan.startClientY });
+      return;
+    }
+    const selection = selectionGestureRef.current;
+    if (!selection || selection.pointerId !== event.pointerId) return;
+    const point = clientToViewport(event.clientX, event.clientY);
+    selection.moved = selection.moved || Math.hypot(point.x - selection.start.x, point.y - selection.start.y) > 3;
+    selection.points = selection.mode === "lasso" ? [...selection.points, point] : [selection.start, point];
+    setSelectionDraft({ mode: selection.mode, start: selection.start, current: point, points: selection.points });
+    selectWithinGesture(selection);
   };
 
-  const finishPan = (event: ReactPointerEvent<HTMLElement>) => {
-    if (panRef.current?.pointerId !== event.pointerId) return;
-    panRef.current = null;
-    setIsPanning(false);
+  const finishViewportGesture = (event: ReactPointerEvent<HTMLElement>) => {
+    if (panRef.current?.pointerId === event.pointerId) { panRef.current = null; setIsPanning(false); return; }
+    const selection = selectionGestureRef.current;
+    if (!selection || selection.pointerId !== event.pointerId) return;
+    if (!selection.moved) setSelectedIds(selection.base);
+    selectionGestureRef.current = null;
+    setSelectionDraft(null);
   };
 
   const handleContextMenu = (event: ReactPointerEvent<HTMLElement>) => {
@@ -389,30 +416,25 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!rect) return;
     const point = screenToWorld(event.clientX, event.clientY);
-    setContextMenu({
-      screenX: Math.min(event.clientX - rect.left, rect.width - 210),
-      screenY: Math.min(event.clientY - rect.top, rect.height - 220),
-      worldX: point.x,
-      worldY: point.y,
-    });
+    setContextMenu({ screenX: Math.min(event.clientX - rect.left, rect.width - 210), screenY: Math.min(event.clientY - rect.top, rect.height - 220), worldX: point.x, worldY: point.y });
   };
 
   const beginItemDrag = (event: ReactPointerEvent<HTMLDivElement>, item: BoardItem) => {
-    if (event.button !== 0 || editingId === item.id || activeTool === "hand") return;
+    if (event.button !== 0 || editingId === item.id || activeTool !== "select" || spacePressed) return;
+    event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setSelectedId(item.id);
     setContextMenu(null);
-    itemDragRef.current = {
-      id: item.id,
-      pointerId: event.pointerId,
-      startClientX: event.clientX,
-      startClientY: event.clientY,
-      originX: item.x,
-      originY: item.y,
-      before: items,
-      moved: false,
-    };
+    if (event.shiftKey) {
+      const next = new Set(selectedIds);
+      if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+      setSelectedIds(next);
+      setAnnouncement(`${next.size} ${next.size === 1 ? "Object" : "Objects"} selected`);
+      return;
+    }
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const dragIds = selectedIds.has(item.id) ? new Set(selectedIds) : new Set([item.id]);
+    setSelectedIds(dragIds);
+    itemDragRef.current = { ids: dragIds, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, before: items, moved: false };
   };
 
   const moveItem = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -421,11 +443,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     const deltaX = (event.clientX - drag.startClientX) / camera.scale;
     const deltaY = (event.clientY - drag.startClientY) / camera.scale;
     drag.moved = drag.moved || Math.abs(deltaX) + Math.abs(deltaY) > 1;
-    replace(
-      drag.before.map((item) =>
-        item.id === drag.id ? { ...item, x: drag.originX + deltaX, y: drag.originY + deltaY } : item,
-      ),
-    );
+    replace(drag.before.map((item) => drag.ids.has(item.id) ? { ...item, x: item.x + deltaX, y: item.y + deltaY } : item));
   };
 
   const finishItemDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -433,10 +451,13 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     if (!drag || drag.pointerId !== event.pointerId) return;
     if (drag.moved) {
       checkpoint(drag.before);
-      setAnnouncement("Item moved");
+      setAnnouncement(`${drag.ids.size} ${drag.ids.size === 1 ? "Object" : "Objects"} moved`);
     }
     itemDragRef.current = null;
   };
+
+  const marqueeRect = selectionDraft?.mode === "marquee" ? rectangleFromPoints(selectionDraft.start, selectionDraft.current) : null;
+  const selectionToolbarTop = selectionBounds ? (selectionBounds.top > 76 ? selectionBounds.top - 48 : selectionBounds.bottom + 10) : 0;
 
   return (
     <section
@@ -447,48 +468,36 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       onWheel={handleWheel}
       onPointerDown={handleViewportPointerDown}
       onPointerMove={handleViewportPointerMove}
-      onPointerUp={finishPan}
-      onPointerCancel={finishPan}
+      onPointerUp={finishViewportGesture}
+      onPointerCancel={finishViewportGesture}
       onDoubleClick={(event) => {
-        if (event.target !== event.currentTarget || activeTool === "hand") return;
+        const target = event.target as Element;
+        if (target.closest("[data-board-item], .board-toolbar, .multi-selection-toolbar") || activeTool !== "select") return;
         createItem("text", screenToWorld(event.clientX, event.clientY));
       }}
       onContextMenu={handleContextMenu}
     >
-      <div
-        className="canvas-field"
-        aria-hidden="true"
-        style={{
-          backgroundPosition: `${camera.x + 1}px ${camera.y + 1}px`,
-          backgroundSize: `${24 * camera.scale}px ${24 * camera.scale}px`,
-        }}
-      />
-
-      <div
-        className="canvas-world"
-        style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}
-      >
+      <div className="canvas-field" aria-hidden="true" style={{ backgroundPosition: `${camera.x + 1}px ${camera.y + 1}px`, backgroundSize: `${24 * camera.scale}px ${24 * camera.scale}px` }} />
+      <div className="canvas-world" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
         {items.map((item) => {
-          const selected = selectedId === item.id;
+          const selected = selectedIds.has(item.id);
           const editing = editingId === item.id;
           return (
             <div
               key={item.id}
               data-board-item
+              data-board-item-id={item.id}
               className={`board-object ${item.type}-object${selected ? " is-selected" : ""}${editing ? " is-editing" : ""}`}
               style={{ transform: `translate(${item.x}px, ${item.y}px)` }}
               role="group"
-              aria-label={`${item.type}: ${item.text || "Empty"}`}
+              aria-label={`${item.type}: ${item.text || "Empty"}${selected ? ", selected" : ""}`}
               tabIndex={editing ? -1 : 0}
               onPointerDown={(event) => beginItemDrag(event, item)}
               onPointerMove={moveItem}
               onPointerUp={finishItemDrag}
               onPointerCancel={finishItemDrag}
-              onDoubleClick={(event) => {
-                event.stopPropagation();
-                beginEditing(item);
-              }}
-              onFocus={() => setSelectedId(item.id)}
+              onDoubleClick={(event) => { event.stopPropagation(); beginEditing(item); }}
+              onFocus={() => { if (!selectedIds.has(item.id)) setSelectedIds(new Set([item.id])); }}
             >
               {editing ? (
                 <textarea
@@ -500,23 +509,33 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                   onChange={(event) => setDraftText(event.target.value)}
                   onBlur={finishEditing}
                   onKeyDown={(event) => {
-                    if (event.key === "Escape") {
-                      event.preventDefault();
-                      cancelEditing();
-                    }
-                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                      event.preventDefault();
-                      finishEditing();
-                    }
+                    if (event.key === "Escape") { event.preventDefault(); cancelEditing(); }
+                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); finishEditing(); }
                   }}
                 />
-              ) : (
-                <div className="object-surface">{item.text}</div>
-              )}
+              ) : <div className="object-surface">{item.text}</div>}
             </div>
           );
         })}
       </div>
+
+      {marqueeRect && <div className="selection-marquee" aria-hidden="true" style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height }} />}
+      {selectionDraft?.mode === "lasso" && (
+        <svg className="selection-lasso" aria-hidden="true">
+          <polygon points={selectionDraft.points.map((point) => `${point.x},${point.y}`).join(" ")} />
+        </svg>
+      )}
+      {selectionBounds && (
+        <>
+          <div className="multi-selection-bounds" aria-hidden="true" style={{ left: selectionBounds.left - 7, top: selectionBounds.top - 7, width: selectionBounds.width + 14, height: selectionBounds.height + 14 }} />
+          <div className="multi-selection-toolbar" role="toolbar" aria-label={`${selectedIds.size} selected Objects`} style={{ left: selectionBounds.left + selectionBounds.width / 2, top: selectionToolbarTop }} onPointerDown={(event) => event.stopPropagation()}>
+            <span>{selectedIds.size} selected</span>
+            <span className="multi-selection-divider" aria-hidden="true" />
+            <button type="button" onClick={duplicateSelected} title="Duplicate (⌘D)">Duplicate</button>
+            <button className="is-destructive" type="button" onClick={deleteSelected} title="Delete">Delete</button>
+          </div>
+        </>
+      )}
 
       <BoardToolbar
         activeTool={activeTool}
@@ -525,108 +544,29 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         zoomPercent={Math.round(camera.scale * 100)}
         onSelectTool={(tool) => {
           setActiveTool(tool);
-          setAnnouncement(tool === "hand" ? "Pan tool active" : "Select tool active");
+          setAnnouncement(tool === "hand" ? "Pan tool active" : tool === "lasso" ? "Lasso tool active" : "Select tool active");
         }}
-        onAddText={() => {
-          setActiveTool("select");
-          createAtViewportCenter("text");
-        }}
-        onAddNote={() => {
-          setActiveTool("select");
-          createAtViewportCenter("note");
-        }}
-        onUndo={() => {
-          undo();
-          setAnnouncement("Undone");
-        }}
-        onRedo={() => {
-          redo();
-          setAnnouncement("Redone");
-        }}
-        onZoomOut={() => {
-          zoomAtViewportCenter(1 / 1.12);
-          setAnnouncement("Zoomed out");
-        }}
-        onResetView={() => {
-          setCamera(DEFAULT_CAMERA);
-          setAnnouncement("View reset");
-        }}
-        onZoomIn={() => {
-          zoomAtViewportCenter(1.12);
-          setAnnouncement("Zoomed in");
-        }}
+        onAddText={() => { setActiveTool("select"); createAtViewportCenter("text"); }}
+        onAddNote={() => { setActiveTool("select"); createAtViewportCenter("note"); }}
+        onUndo={() => { undo(); setAnnouncement("Undone"); }}
+        onRedo={() => { redo(); setAnnouncement("Redone"); }}
+        onZoomOut={() => { zoomAtViewportCenter(1 / 1.12); setAnnouncement("Zoomed out"); }}
+        onResetView={() => { setCamera(DEFAULT_CAMERA); setAnnouncement("View reset"); }}
+        onZoomIn={() => { zoomAtViewportCenter(1.12); setAnnouncement("Zoomed in"); }}
       />
 
       {contextMenu && (
-        <div
-          className="canvas-context-menu"
-          role="menu"
-          aria-label="Canvas actions"
-          style={{ left: contextMenu.screenX, top: contextMenu.screenY }}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => createItem("text", { x: contextMenu.worldX, y: contextMenu.worldY })}
-          >
-            <span>Add text</span>
-            <kbd>T</kbd>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => createItem("note", { x: contextMenu.worldX, y: contextMenu.worldY })}
-          >
-            <span>Add note</span>
-            <kbd>N</kbd>
-          </button>
+        <div className="canvas-context-menu" role="menu" aria-label="Canvas actions" style={{ left: contextMenu.screenX, top: contextMenu.screenY }} onPointerDown={(event) => event.stopPropagation()}>
+          <button type="button" role="menuitem" onClick={() => createItem("text", { x: contextMenu.worldX, y: contextMenu.worldY })}><span>Add text</span><kbd>T</kbd></button>
+          <button type="button" role="menuitem" onClick={() => createItem("note", { x: contextMenu.worldX, y: contextMenu.worldY })}><span>Add note</span><kbd>N</kbd></button>
           <div className="context-divider" />
-          <button
-            type="button"
-            role="menuitem"
-            disabled={!canUndo}
-            onClick={() => {
-              undo();
-              setContextMenu(null);
-              setAnnouncement("Undone");
-            }}
-          >
-            <span>Undo</span>
-            <kbd>⌘Z</kbd>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={!canRedo}
-            onClick={() => {
-              redo();
-              setContextMenu(null);
-              setAnnouncement("Redone");
-            }}
-          >
-            <span>Redo</span>
-            <kbd>⇧⌘Z</kbd>
-          </button>
+          <button type="button" role="menuitem" disabled={!canUndo} onClick={() => { undo(); setContextMenu(null); setAnnouncement("Undone"); }}><span>Undo</span><kbd>⌘Z</kbd></button>
+          <button type="button" role="menuitem" disabled={!canRedo} onClick={() => { redo(); setContextMenu(null); setAnnouncement("Redone"); }}><span>Redo</span><kbd>⇧⌘Z</kbd></button>
           <div className="context-divider" />
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setCamera(DEFAULT_CAMERA);
-              setContextMenu(null);
-              setAnnouncement("View reset");
-            }}
-          >
-            <span>Reset view</span>
-            <kbd>100%</kbd>
-          </button>
+          <button type="button" role="menuitem" onClick={() => { setCamera(DEFAULT_CAMERA); setContextMenu(null); setAnnouncement("View reset"); }}><span>Reset view</span><kbd>100%</kbd></button>
         </div>
       )}
-
-      <p className="sr-only" aria-live="polite">
-        {announcement}
-      </p>
+      <p className="sr-only" aria-live="polite">{announcement}</p>
     </section>
   );
 }

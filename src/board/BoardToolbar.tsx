@@ -8,6 +8,7 @@ interface BoardToolbarProps {
   canUndo: boolean;
   zoomPercent: number;
   onAddNote: () => void;
+  onAddSource: () => void;
   onAddFrame: () => void;
   onAddText: () => void;
   onRedo: () => void;
@@ -25,6 +26,7 @@ export function BoardToolbar({
   zoomPercent,
   onAddFrame,
   onAddNote,
+  onAddSource,
   onAddText,
   onRedo,
   onResetView,
@@ -67,6 +69,9 @@ export function BoardToolbar({
       </ToolButton>
       <ToolButton label="Add note" shortcut="N" onClick={onAddNote}>
         <NoteIcon />
+      </ToolButton>
+      <ToolButton label="Add source" shortcut="⌘V" onClick={onAddSource}>
+        <SourceIcon />
       </ToolButton>
       <ToolButton label="Add frame" shortcut="F" active={activeTool === "frame"} onClick={onAddFrame}>
         <FrameIcon />
@@ -178,6 +183,15 @@ function NoteIcon() {
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <path d="M4 3.7h12v9.5L12.7 16H4z" fill="var(--sun)" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
       <path d="M12.7 16v-2.8H16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SourceIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M6.8 5.4 5.1 7.1a3.1 3.1 0 0 0 4.4 4.4l1.5-1.5M13.2 14.6l1.7-1.7a3.1 3.1 0 0 0-4.4-4.4L9 10" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="15.4" cy="4.6" r="1.55" fill="var(--studio-blue)" />
     </svg>
   );
 }

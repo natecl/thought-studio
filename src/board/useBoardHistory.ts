@@ -80,6 +80,16 @@ function loadItems(storageKey: string): BoardItem[] {
         typeof candidate.y === "number";
       if (!hasBaseFields || typeof candidate.text !== "string") return false;
       if (candidate.type === "text" || candidate.type === "note") return true;
+      if (candidate.type === "source") {
+        return (
+          (candidate.sourceKind === "url" || candidate.sourceKind === "image" || candidate.sourceKind === "file") &&
+          typeof candidate.url === "string" &&
+          typeof candidate.origin === "string" &&
+          typeof candidate.importedAt === "string" &&
+          typeof candidate.width === "number" &&
+          typeof candidate.height === "number"
+        );
+      }
       return (
         candidate.type === "frame" &&
         typeof candidate.width === "number" &&

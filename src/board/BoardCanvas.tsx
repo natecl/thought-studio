@@ -4,12 +4,14 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type FormEvent,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { BoardToolbar, type CanvasTool } from "./BoardToolbar";
+import { createUrlSource as buildUrlSource, formatSourceDate, parseSourceUrl, sourceInitial } from "./source";
 import { useBoardHistory } from "./useBoardHistory";
-import type { BoardFrame, BoardItem, BoardObjectType, Camera } from "./types";
+import type { BoardFrame, BoardItem, BoardObjectType, BoardSource, Camera } from "./types";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
@@ -23,6 +25,7 @@ const FRAME_BOTTOM_PADDING = 30;
 interface Point { x: number; y: number }
 interface ScreenRect { left: number; top: number; right: number; bottom: number; width: number; height: number }
 interface ContextMenuState { screenX: number; screenY: number; worldX: number; worldY: number }
+interface SourceComposerState { point: Point; value: string; error: string }
 interface PanGesture { pointerId: number; startClientX: number; startClientY: number; startCamera: Camera }
 interface ItemDragGesture {
   ids: Set<string>;
@@ -123,6 +126,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const selectionGestureRef = useRef<SelectionGesture | null>(null);
   const framePlacementRef = useRef<FramePlacementGesture | null>(null);
   const frameResizeRef = useRef<FrameResizeGesture | null>(null);
+  const lastPointerWorldRef = useRef<Point | null>(null);
   const { items, commit, replace, checkpoint, undo, redo, canUndo, canRedo } = useBoardHistory(boardId);
   const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -132,6 +136,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftText, setDraftText] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [sourceComposer, setSourceComposer] = useState<SourceComposerState | null>(null);
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
@@ -209,6 +214,39 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     createItem(type, screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2));
   }, [createItem, screenToWorld]);
 
+  const viewportCenterWorld = useCallback(() => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }, [screenToWorld]);
+
+  const addUrlSource = useCallback((value: string, point: Point) => {
+    const source = buildUrlSource(value, point.x, point.y);
+    if (!source) return false;
+    commit([...items, source]);
+    setSelectedIds(new Set([source.id]));
+    setEditingId(null);
+    setContextMenu(null);
+    setSourceComposer(null);
+    setActiveTool("select");
+    setAnnouncement(`Source from ${source.origin} added`);
+    return true;
+  }, [commit, items]);
+
+  const openSourceComposer = useCallback((point = viewportCenterWorld()) => {
+    setContextMenu(null);
+    setSourceComposer({ point, value: "", error: "" });
+    setAnnouncement("Add Source dialog opened");
+  }, [viewportCenterWorld]);
+
+  const submitSource = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!sourceComposer) return;
+    if (!addUrlSource(sourceComposer.value, sourceComposer.point)) {
+      setSourceComposer({ ...sourceComposer, error: "Enter a valid http or https URL." });
+    }
+  };
+
   const createEmptyFrameAt = useCallback((point: Point) => {
     const frame: BoardFrame = {
       id: crypto.randomUUID(),
@@ -285,6 +323,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   }, [camera, commit, items, readItemRects, selectedIds]);
 
   const beginEditing = useCallback((item: BoardItem) => {
+    if (item.type === "source") return;
     setSelectedIds(new Set([item.id]));
     setEditingId(item.id);
     setDraftText(item.text);
@@ -489,6 +528,21 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     if (!setsMatch(validSelection, selectedIds)) setSelectedIds(validSelection);
   }, [items, selectedIds]);
 
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement || target?.isContentEditable;
+      if (isTyping) return;
+      const value = event.clipboardData?.getData("text/plain") ?? "";
+      if (!parseSourceUrl(value)) return;
+      event.preventDefault();
+      addUrlSource(value, lastPointerWorldRef.current ?? viewportCenterWorld());
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [addUrlSource, viewportCenterWorld]);
+
   useLayoutEffect(() => {
     if (selectedIds.size < 2) {
       setSelectionBounds(null);
@@ -520,6 +574,11 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement || target?.isContentEditable;
       if (event.key === "Escape") {
+        if (sourceComposer) {
+          setSourceComposer(null);
+          setAnnouncement("Add Source dialog closed");
+          return;
+        }
         setContextMenu(null);
         setSelectionDraft(null);
         selectionGestureRef.current = null;
@@ -564,7 +623,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       }
       if (event.key === "Enter" && selectedIds.size === 1) {
         const item = items.find((candidate) => candidate.id === [...selectedIds][0]);
-        if (item) beginEditing(item);
+        if (item && item.type !== "source") beginEditing(item);
         return;
       }
       if (selectedIds.size > 0 && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
@@ -582,7 +641,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     return () => { window.removeEventListener("keydown", handleKeyDown); window.removeEventListener("keyup", handleKeyUp); };
-  }, [activeTool, beginEditing, cancelEditing, createAtViewportCenter, createFrameFromSelection, deleteSelected, duplicateSelected, editingId, items, nudgeSelected, redo, selectedIds, undo, zoomAtViewportCenter]);
+  }, [activeTool, beginEditing, cancelEditing, createAtViewportCenter, createFrameFromSelection, deleteSelected, duplicateSelected, editingId, items, nudgeSelected, redo, selectedIds, sourceComposer, undo, zoomAtViewportCenter]);
 
   const handleWheel = (event: ReactWheelEvent<HTMLElement>) => {
     event.preventDefault();
@@ -603,6 +662,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
 
   const handleViewportPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     setContextMenu(null);
+    lastPointerWorldRef.current = screenToWorld(event.clientX, event.clientY);
     const target = event.target as Element;
     const isPanGesture = event.button === 1 || (event.button === 0 && (spacePressed || activeTool === "hand"));
     if (isPanGesture) {
@@ -633,6 +693,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   };
 
   const handleViewportPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    lastPointerWorldRef.current = screenToWorld(event.clientX, event.clientY);
     if (frameResizeRef.current?.pointerId === event.pointerId) {
       moveFrameResize(event.clientX, event.clientY);
       return;
@@ -787,16 +848,19 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
               className={`board-object ${item.type}-object${selected ? " is-selected" : ""}${editing ? " is-editing" : ""}`}
               style={{
                 transform: `translate(${item.x}px, ${item.y}px)`,
-                ...(item.type === "frame" ? { width: item.width, height: item.height } : {}),
+                ...(item.type === "frame" || item.type === "source" ? { width: item.width, height: item.height } : {}),
               }}
               role="group"
-              aria-label={`${item.type === "frame" ? "Frame" : item.type}: ${item.text || "Empty"}${selected ? ", selected" : ""}`}
+              aria-label={`${item.type === "frame" ? "Frame" : item.type === "source" ? "Source" : item.type}: ${item.text || "Empty"}${selected ? ", selected" : ""}`}
               tabIndex={editing ? -1 : 0}
               onPointerDown={(event) => beginItemDrag(event, item)}
               onPointerMove={moveItem}
               onPointerUp={finishItemDrag}
               onPointerCancel={finishItemDrag}
-              onDoubleClick={(event) => { event.stopPropagation(); beginEditing(item); }}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                if (item.type !== "source") beginEditing(item);
+              }}
               onFocus={() => { if (!selectedIds.has(item.id)) setSelectedIds(new Set([item.id])); }}
             >
               {item.type === "frame" ? (
@@ -844,6 +908,8 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                     </>
                   )}
                 </>
+              ) : item.type === "source" ? (
+                <SourceCard source={item} />
               ) : editing ? (
                 <textarea
                   data-editor-id={item.id}
@@ -899,6 +965,36 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         </>
       )}
 
+      {sourceComposer && (
+        <form className="source-composer" aria-label="Add a Source" onSubmit={submitSource} onPointerDown={(event) => event.stopPropagation()}>
+          <div className="source-composer-heading">
+            <span className="source-composer-mark" aria-hidden="true" />
+            <div>
+              <strong>Bring in a source</strong>
+              <span>Its original link stays attached.</span>
+            </div>
+          </div>
+          <label htmlFor="source-url-input">Web address</label>
+          <input
+            id="source-url-input"
+            autoFocus
+            inputMode="url"
+            type="text"
+            value={sourceComposer.value}
+            placeholder="https://…"
+            aria-describedby={sourceComposer.error ? "source-url-error" : "source-url-hint"}
+            onChange={(event) => setSourceComposer({ ...sourceComposer, value: event.target.value, error: "" })}
+          />
+          {sourceComposer.error
+            ? <span className="source-composer-error" id="source-url-error" role="alert">{sourceComposer.error}</span>
+            : <span className="source-composer-hint" id="source-url-hint">Tip: paste a URL anywhere on the Board.</span>}
+          <div className="source-composer-actions">
+            <button type="button" onClick={() => setSourceComposer(null)}>Cancel</button>
+            <button className="is-primary" type="submit">Add to Board</button>
+          </div>
+        </form>
+      )}
+
       <BoardToolbar
         activeTool={activeTool}
         canUndo={canUndo}
@@ -910,6 +1006,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         }}
         onAddText={() => { setActiveTool("select"); createAtViewportCenter("text"); }}
         onAddNote={() => { setActiveTool("select"); createAtViewportCenter("note"); }}
+        onAddSource={() => openSourceComposer()}
         onAddFrame={createFrameFromSelection}
         onUndo={() => { undo(); setAnnouncement("Undone"); }}
         onRedo={() => { redo(); setAnnouncement("Redone"); }}
@@ -922,6 +1019,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         <div className="canvas-context-menu" role="menu" aria-label="Canvas actions" style={{ left: contextMenu.screenX, top: contextMenu.screenY }} onPointerDown={(event) => event.stopPropagation()}>
           <button type="button" role="menuitem" onClick={() => createItem("text", { x: contextMenu.worldX, y: contextMenu.worldY })}><span>Add text</span><kbd>T</kbd></button>
           <button type="button" role="menuitem" onClick={() => createItem("note", { x: contextMenu.worldX, y: contextMenu.worldY })}><span>Add note</span><kbd>N</kbd></button>
+          <button type="button" role="menuitem" onClick={() => openSourceComposer({ x: contextMenu.worldX, y: contextMenu.worldY })}><span>Add Source</span><kbd>⌘V</kbd></button>
           <button type="button" role="menuitem" onClick={() => createEmptyFrameAt({ x: contextMenu.worldX, y: contextMenu.worldY })}><span>Add Frame</span><kbd>F</kbd></button>
           <div className="context-divider" />
           <button type="button" role="menuitem" disabled={!canUndo} onClick={() => { undo(); setContextMenu(null); setAnnouncement("Undone"); }}><span>Undo</span><kbd>⌘Z</kbd></button>
@@ -932,5 +1030,38 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       )}
       <p className="sr-only" aria-live="polite">{announcement}</p>
     </section>
+  );
+}
+
+function SourceCard({ source }: { source: BoardSource }) {
+  return (
+    <article className="source-surface">
+      <header className="source-kicker">
+        <span className="source-kicker-mark" aria-hidden="true" />
+        <span>Source</span>
+        <time dateTime={source.importedAt} title={`Imported ${new Date(source.importedAt).toLocaleString()}`}>
+          {formatSourceDate(source.importedAt)}
+        </time>
+      </header>
+      <div className="source-preview">
+        <span className="source-origin-mark" aria-hidden="true">{sourceInitial(source.origin)}</span>
+        <div className="source-preview-copy">
+          <strong>{source.text}</strong>
+          <span>{source.origin}</span>
+        </div>
+      </div>
+      <footer className="source-footer">
+        <span className="source-provenance">Original link retained</span>
+        <a
+          href={source.url}
+          target="_blank"
+          rel="noreferrer"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
+          Open <span aria-hidden="true">↗</span>
+        </a>
+      </footer>
+    </article>
   );
 }

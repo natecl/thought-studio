@@ -1,6 +1,6 @@
 # Interaction prototype foundation
 
-- **Status:** Milestone 3 implemented
+- **Status:** Milestone 4A implemented
 - **Date:** 2026-08-29
 - **Initial input priority:** Desktop pointer and keyboard
 
@@ -19,6 +19,7 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 | Choose Lasso | Lasso in the tool dock | `L` |
 | Add text | Double-click; right-click → Add text | `T` |
 | Add note | Right-click → Add note | `N` |
+| Add URL Source | Paste a URL anywhere; Add Source in the tool dock or right-click menu | Command/Control-V |
 | Add an empty Frame | Choose Frame, then drag a crop-like boundary; right-click → Add Frame uses a default size | `F`, then drag |
 | Select one | Click an Object | Tab to an Object |
 | Toggle selection | Shift-click an Object | — |
@@ -42,6 +43,8 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Text and Note are available from the compact tool dock and the contextual right-click menu.
 - The tool dock contains no unavailable or speculative tools.
 - Text and notes use the same underlying Board coordinate system and remain stable while panning or zooming.
+- A URL can enter directly as a first-class Source with its normalized link, origin, import time, and a useful local preview. No external metadata service is required by this prototype slice.
+- Sources participate in selection, movement, framing, duplication, deletion, undo, and local persistence using the same Board entity model as manually authored material.
 - Object creation, editing, movement, and deletion are meaningful undoable operations.
 - Multi-selection has one shared boundary and one contextual toolbar while preserving each Object's individual identity.
 - Selected Objects move, nudge, duplicate, and delete as one reversible operation.
@@ -60,9 +63,9 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Rotation handles
 - Ink and erasing
 - Shapes and Connections
-- Image and URL Sources
+- Image and file Sources
 - Server persistence and synchronization
 - Multiplayer presence
 - Agent selection and proposal workflows
 
-The next milestone should add a universal Source Object and simple Connections before agent participation so imported context remains visibly grounded in the Board.
+The next milestone should add simple Connections between Board entities so imported context can become an explicit visible system before agent participation.

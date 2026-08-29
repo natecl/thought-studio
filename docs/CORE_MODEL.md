@@ -42,6 +42,8 @@ A Source should preserve:
 - Stable reference to extracted material
 - Changes or synchronization state when applicable
 
+The current interaction prototype implements the first universal Source slice for URLs. A pasted or manually entered web address becomes a persisted Board entity with a normalized original link, origin, import time, and local preview. It uses the same selection, movement, Frame membership, history, and persistence mechanics as other Board material without selecting a remote metadata provider or backend architecture.
+
 ### Connection
 
 A relationship between two or more entities. A Connection may be purely visual or carry optional meaning such as supports, contradicts, depends on, derives from, or created by.

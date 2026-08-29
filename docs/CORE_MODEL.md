@@ -42,7 +42,7 @@ A Source should preserve:
 - Stable reference to extracted material
 - Changes or synchronization state when applicable
 
-The current interaction prototype implements the first universal Source slice for URLs. A pasted or manually entered web address becomes a persisted Board entity with a normalized original link, origin, import time, and local preview. It uses the same selection, movement, Frame membership, history, and persistence mechanics as other Board material without selecting a remote metadata provider or backend architecture. Notes and quotations created from a Source retain both its live Board identity and a durable provenance snapshot, so their lineage survives Source removal and can still open the original material.
+The current interaction prototype implements a universal Source slice for URLs, images, and files. A pasted or manually entered web address becomes a persisted Board entity with a normalized original link, origin, import time, and local preview. Dropped or chosen images and files enter through the same entity model with their original name, media type, byte size, and browser-local payload; images also retain a visual preview. All Source forms use the same selection, movement, Frame membership, history, and persistence mechanics as other Board material without selecting a remote metadata provider, blob store, or backend architecture. Notes and quotations created from a Source retain both its live Board identity and a durable provenance snapshot, so their lineage survives Source removal and can still open or download the original material. The prototype's 1.5 MB per-file browser limit is an implementation boundary rather than a product requirement.
 
 ### Connection
 

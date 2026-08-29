@@ -154,13 +154,10 @@ function pointInsidePolygon(point: Point, polygon: Point[]) {
   for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
     const currentPoint = polygon[index];
     const previousPoint = polygon[previous];
-    const crosses =
-      currentPoint.y > point.y !== previousPoint.y > point.y &&
-      point.x <
-        ((previousPoint.x - currentPoint.x) * (point.y - currentPoint.y)) /
-          (previousPoint.y - currentPoint.y || Number.EPSILON) +
-          currentPoint.x;
-    if (crosses) inside = !inside;
+    const crossesHorizontalRay = (currentPoint.y > point.y) !== (previousPoint.y > point.y) &&
+      point.x < ((previousPoint.x - currentPoint.x) * (point.y - currentPoint.y)) /
+      (previousPoint.y - currentPoint.y || Number.EPSILON) + currentPoint.x;
+    if (crossesHorizontalRay) inside = !inside;
   }
   return inside;
 }
@@ -806,12 +803,14 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     if (gesture.mode === "marquee") {
       const selectionRect = rectangleFromPoints(gesture.start, gesture.points.at(-1) ?? gesture.start);
       itemRects.forEach((rect, id) => {
-        if (items.find((item) => item.id === id)?.type === "frame") return;
+        const itemType = items.find((item) => item.id === id)?.type;
+        if (itemType === "frame" || itemType === "connection") return;
         if (rectanglesIntersect(selectionRect, rect)) next.add(id);
       });
     } else if (gesture.points.length >= 3) {
       itemRects.forEach((rect, id) => {
-        if (items.find((item) => item.id === id)?.type === "frame") return;
+        const itemType = items.find((item) => item.id === id)?.type;
+        if (itemType === "frame" || itemType === "connection") return;
         const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
         if (pointInsidePolygon(center, gesture.points)) next.add(id);
       });
@@ -996,7 +995,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       return;
     }
     const mode = activeTool === "lasso" ? "lasso" : "marquee";
-    const base = event.shiftKey ? new Set(selectedIds) : new Set<string>();
+    const base = event.shiftKey || event.metaKey || event.ctrlKey ? new Set(selectedIds) : new Set<string>();
     const gesture: SelectionGesture = { pointerId: event.pointerId, mode, base, start: point, points: [point], moved: false };
     event.currentTarget.setPointerCapture(event.pointerId);
     selectionGestureRef.current = gesture;
@@ -1027,7 +1026,14 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     if (!selection || selection.pointerId !== event.pointerId) return;
     const point = clientToViewport(event.clientX, event.clientY);
     selection.moved = selection.moved || Math.hypot(point.x - selection.start.x, point.y - selection.start.y) > 3;
-    selection.points = selection.mode === "lasso" ? [...selection.points, point] : [selection.start, point];
+    if (selection.mode === "lasso") {
+      const previousPoint = selection.points.at(-1) ?? selection.start;
+      if (Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y) >= 2.5) {
+        selection.points = [...selection.points, point];
+      }
+    } else {
+      selection.points = [selection.start, point];
+    }
     setSelectionDraft({ mode: selection.mode, start: selection.start, current: point, points: selection.points });
     selectWithinGesture(selection);
   };
@@ -1064,7 +1070,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     event.stopPropagation();
     setContextMenu(null);
     setEditingId(null);
-    if (event.shiftKey) {
+    if (event.shiftKey || event.metaKey || event.ctrlKey) {
       const next = new Set(selectedIds);
       if (next.has(connection.id)) next.delete(connection.id); else next.add(connection.id);
       setSelectedIds(next);
@@ -1080,7 +1086,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     event.preventDefault();
     event.stopPropagation();
     setContextMenu(null);
-    if (event.shiftKey) {
+    if (event.shiftKey || event.metaKey || event.ctrlKey) {
       const next = new Set(selectedIds);
       if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
       setSelectedIds(next);
@@ -1090,6 +1096,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
     event.currentTarget.setPointerCapture(event.pointerId);
     const dragIds = selectedIds.has(item.id) ? new Set(selectedIds) : new Set([item.id]);
     setSelectedIds(dragIds);
+    if (dragIds.size === 1) setAnnouncement("Object selected. Shift-click another Object to select both");
     itemDragRef.current = { ids: expandFrameSelection(dragIds), directIds: dragIds, pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, before: items, moved: false };
   };
 
@@ -1198,7 +1205,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                 role="group"
                 aria-label={`Connection from ${from?.text || from?.type || "Object"} to ${to?.text || to?.type || "Object"}${selected ? ", selected" : ""}`}
                 tabIndex={0}
-                onFocus={() => setSelectedIds(new Set([connection.id]))}
+                onFocus={() => setSelectedIds((current) => current.has(connection.id) ? current : new Set([connection.id]))}
               >
                 <path className="connection-hit-area" d={path.d} onPointerDown={(event) => selectConnection(event, connection)} />
                 <path className="connection-line" d={path.d} />
@@ -1232,7 +1239,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                 event.stopPropagation();
                 if (item.type !== "source" && item.type !== "proposal") beginEditing(item);
               }}
-              onFocus={() => { if (!selectedIds.has(item.id)) setSelectedIds(new Set([item.id])); }}
+              onFocus={() => setSelectedIds((current) => current.has(item.id) ? current : new Set([item.id]))}
             >
               {item.type === "frame" ? (
                 <>
@@ -1330,7 +1337,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       {marqueeRect && <div className="selection-marquee" aria-hidden="true" style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height }} />}
       {selectionDraft?.mode === "lasso" && (
         <svg className="selection-lasso" aria-hidden="true">
-          <polygon points={selectionDraft.points.map((point) => `${point.x},${point.y}`).join(" ")} />
+          <polyline points={selectionDraft.points.map((point) => `${point.x},${point.y}`).join(" ")} />
         </svg>
       )}
       {selectionBounds && (

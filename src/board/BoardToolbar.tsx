@@ -152,20 +152,7 @@ function HandIcon() {
 function LassoIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M15.8 9.2c0 3-2.7 5.1-6.3 5.1-3.4 0-5.8-1.7-5.8-4.3 0-2.8 2.8-4.7 6.4-4.7 3.2 0 5.7 1.5 5.7 3.9Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.35"
-        strokeLinecap="round"
-      />
-      <path
-        d="M15.8 9.2c0 3.9-1.2 6.6-3.2 6.6-1.1 0-1.8-.7-1.8-1.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.35"
-        strokeLinecap="round"
-      />
+      <circle cx="10" cy="10" r="5.8" fill="none" stroke="currentColor" strokeWidth="1.4" />
     </svg>
   );
 }
@@ -190,8 +177,15 @@ function NoteIcon() {
 function SourceIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M6.8 5.4 5.1 7.1a3.1 3.1 0 0 0 4.4 4.4l1.5-1.5M13.2 14.6l1.7-1.7a3.1 3.1 0 0 0-4.4-4.4L9 10" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="15.4" cy="4.6" r="1.55" fill="var(--studio-blue)" />
+      <path
+        d="m13.9 6.1-6.7 6.7a1.9 1.9 0 0 0 2.7 2.7l6-6A3.2 3.2 0 0 0 11.4 5l-6.3 6.3a4.4 4.4 0 0 0 6.2 6.2l5.6-5.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        transform="rotate(-45 10 10)"
+      />
     </svg>
   );
 }

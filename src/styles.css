@@ -885,7 +885,8 @@ button {
 
 .text-object,
 .note-object,
-.source-object {
+.source-object,
+.proposal-object {
   z-index: 1;
 }
 
@@ -1250,6 +1251,16 @@ button {
   background: rgba(17, 17, 17, 0.055);
 }
 
+.multi-selection-toolbar button.is-agent-action {
+  color: #237c4c;
+  font-weight: 700;
+}
+
+.multi-selection-toolbar button.is-agent-action:hover {
+  color: var(--black);
+  background: rgba(60, 172, 110, 0.12);
+}
+
 .multi-selection-toolbar button.is-destructive:hover {
   color: var(--vermilion);
   background: rgba(231, 78, 63, 0.08);
@@ -1338,6 +1349,221 @@ button {
 .note-object.is-quote .object-surface,
 .note-object.is-quote .object-editor {
   border-top-color: var(--vermilion);
+}
+
+.note-object.is-agent-authored {
+  width: 314px;
+  height: 244px;
+}
+
+.note-object.is-agent-authored .object-surface,
+.note-object.is-agent-authored .object-editor {
+  padding: 18px 18px 52px;
+  overflow: auto;
+  border-top-color: var(--leaf);
+  font-size: 15.5px;
+  line-height: 1.35;
+}
+
+.agent-lineage {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(17, 17, 17, 0.1);
+  background: var(--chalk);
+  color: rgba(17, 17, 17, 0.48);
+  font-size: 10.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.agent-lineage .agent-identity-mark {
+  width: 9px;
+  height: 9px;
+}
+
+.agent-lineage strong {
+  color: #237c4c;
+  font-weight: 700;
+}
+
+.agent-lineage button {
+  padding: 0;
+  color: rgba(17, 17, 17, 0.52);
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.agent-lineage button:hover,
+.agent-lineage button:focus-visible {
+  color: var(--studio-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.proposal-surface {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  padding: 16px 17px 14px;
+  overflow: hidden;
+  color: var(--black);
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  border-top: 4px solid var(--leaf);
+  border-radius: 15px 13px 16px 12px;
+  background: var(--chalk);
+  box-shadow: 0 1px 2px rgb(17 17 17 / 0.035), 0 10px 22px rgb(17 17 17 / 0.05);
+  flex-direction: column;
+}
+
+.proposal-heading,
+.agent-composer-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.agent-identity-mark {
+  display: block;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 13px;
+  margin-top: 2px;
+  border-radius: 59% 41% 52% 48%;
+  background: var(--leaf);
+  transform: rotate(-9deg);
+}
+
+.proposal-heading div,
+.agent-composer-heading div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.proposal-heading strong,
+.agent-composer-heading strong {
+  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  font-variation-settings: "wght" 650;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.proposal-heading div span,
+.agent-composer-heading div span {
+  margin-top: 3px;
+  color: rgba(17, 17, 17, 0.5);
+  font-size: 10.5px;
+}
+
+.proposal-heading time {
+  margin-left: auto;
+  color: rgba(17, 17, 17, 0.42);
+  font-size: 10px;
+}
+
+.proposal-surface blockquote {
+  max-height: 48px;
+  padding-left: 10px;
+  overflow: hidden;
+  border-left: 3px solid var(--studio-blue);
+  margin: 16px 0 9px;
+  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-variation-settings: "wght" 610;
+  font-weight: 610;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.proposal-surface > p {
+  margin: 0;
+  overflow: hidden;
+  color: rgba(17, 17, 17, 0.74);
+  font-size: 12.5px;
+  line-height: 1.34;
+}
+
+.proposal-scope {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.proposal-scope button,
+.proposal-scope span {
+  min-height: 24px;
+  padding: 5px 8px;
+  color: rgba(17, 17, 17, 0.62);
+  border: 1px solid rgba(17, 17, 17, 0.11);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 10.5px;
+  line-height: 1;
+}
+
+.proposal-scope button {
+  color: var(--studio-blue);
+  cursor: pointer;
+}
+
+.proposal-scope button:hover,
+.proposal-scope button:focus-visible {
+  border-color: var(--studio-blue);
+  outline: none;
+}
+
+.proposal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(17, 17, 17, 0.1);
+  margin-top: 10px;
+}
+
+.proposal-actions button,
+.agent-composer-actions button {
+  height: 32px;
+  padding: 0 10px;
+  color: rgba(17, 17, 17, 0.68);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.proposal-actions button:hover,
+.agent-composer-actions button:hover {
+  color: var(--black);
+  background: rgba(17, 17, 17, 0.055);
+}
+
+.proposal-actions button.is-primary,
+.agent-composer-actions button.is-primary {
+  color: var(--chalk);
+  background: var(--black);
+}
+
+.proposal-actions button.is-primary:hover,
+.agent-composer-actions button.is-primary:hover {
+  color: var(--chalk);
+  background: rgba(17, 17, 17, 0.88);
 }
 
 .note-lineage {
@@ -1625,6 +1851,68 @@ button {
   transform: translateX(-50%);
   pointer-events: auto;
   flex-direction: column;
+}
+
+.agent-composer {
+  position: absolute;
+  z-index: 25;
+  display: flex;
+  width: min(370px, calc(100vw - 32px));
+  padding: 17px;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  border-top: 4px solid var(--leaf);
+  border-radius: 15px 13px 16px 12px;
+  background: var(--chalk);
+  box-shadow: 0 18px 48px rgb(17 17 17 / 0.11), 0 3px 8px rgb(17 17 17 / 0.05);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  flex-direction: column;
+}
+
+.agent-composer label {
+  margin: 15px 0 6px;
+  color: rgba(17, 17, 17, 0.68);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.agent-composer textarea {
+  width: 100%;
+  min-height: 78px;
+  padding: 10px 11px;
+  color: var(--black);
+  border: 1px solid rgba(17, 17, 17, 0.18);
+  border-radius: 9px;
+  outline: none;
+  background: #fff;
+  font-family: "Atkinson Hyperlegible", Arial, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.35;
+  resize: none;
+}
+
+.agent-composer textarea:focus {
+  border-color: var(--leaf);
+  box-shadow: 0 0 0 3px rgba(60, 172, 110, 0.12);
+}
+
+.agent-composer-hint,
+.agent-composer-error {
+  min-height: 16px;
+  margin-top: 6px;
+  color: rgba(17, 17, 17, 0.48);
+  font-size: 11px;
+}
+
+.agent-composer-error {
+  color: var(--vermilion);
+}
+
+.agent-composer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .workspace.is-sidebar-open .source-composer {

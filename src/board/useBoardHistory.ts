@@ -93,6 +93,20 @@ function loadItems(storageKey: string): BoardItem[] {
       if (candidate.type === "connection") {
         return typeof candidate.fromId === "string" && typeof candidate.toId === "string";
       }
+      if (candidate.type === "proposal") {
+        return (
+          typeof candidate.prompt === "string" &&
+          typeof candidate.agentName === "string" &&
+          typeof candidate.createdAt === "string" &&
+          typeof candidate.width === "number" &&
+          typeof candidate.height === "number" &&
+          Array.isArray(candidate.scopeIds) &&
+          candidate.scopeIds.every((id) => typeof id === "string") &&
+          Array.isArray(candidate.scopeLabels) &&
+          candidate.scopeLabels.every((label) => typeof label === "string") &&
+          Array.isArray(candidate.sources)
+        );
+      }
       return (
         candidate.type === "frame" &&
         typeof candidate.width === "number" &&

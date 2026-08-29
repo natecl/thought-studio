@@ -55,13 +55,14 @@ npm run typecheck
 - Image and file Sources through drag-and-drop or file choice, with attached browser-local originals
 - Simple visual Connections between selected Board entities that follow their endpoints
 - Source-linked notes and quotations with durable origin snapshots and on-Board Source location
+- Bounded Ask agent proposals with visible scope, retained Source provenance, attribution, accept/reject, and undo
 - Single and multi-selection with Shift-click, marquee, and freeform lasso
 - Collective dragging, keyboard nudging, duplication, and deletion
 - First-class Frames with naming, explicit membership, collective movement, and duplication
 - Undo and redo for meaningful Object operations
 - Local Board-item persistence across reloads
 
-See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. Bounded agent participation is the next interaction milestone. The approved mockup is a visual reference; the coded interface is the product implementation.
+See the [interaction prototype foundation](docs/design/INTERACTION_PROTOTYPE.md) for the complete input model. The first bounded agent proposal workflow is implemented without committing the product to an AI provider or backend architecture. The approved mockup is a visual reference; the coded interface is the product implementation.
 
 ## Start here
 

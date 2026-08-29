@@ -64,6 +64,8 @@ The current prototype represents a Frame as a first-class persisted Board entity
 
 An actor present on the board. A Participant may be a person or an agent and has identity, presence, capabilities, permissions, and activity history.
 
+The current prototype introduces the first visible agent identity through a bounded Draft Proposal. Its explicit scope identities, durable scope labels, retained Source references, request, author, and creation time remain on the Board. Accepting it produces an attributed Note; rejecting it removes the draft; undo can reverse either decision. This validates the shared visible model without yet defining live execution, permissions, or provider architecture.
+
 ### Lens
 
 A non-destructive way of interpreting or presenting board state. Examples include source lineage, chronology, semantic relationships, participant contributions, uncertainty, or presentation order.

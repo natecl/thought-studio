@@ -1,6 +1,6 @@
 # Agent experience
 
-**Status:** Foundational interaction hypothesis
+**Status:** First bounded proposal slice implemented
 
 ## Principle
 
@@ -32,6 +32,8 @@ The user selects a region or objects and gives an instruction such as:
 - Turn this system into an outline.
 
 The selection defines default context and scope.
+
+The current prototype implements this first invocation pattern. A selection of two or more Board entities exposes Ask agent. The request creates a visible, persisted Draft Proposal beside the scoped material, including retained Source references. Accept converts the draft into an attributed agent Note; reject removes it; either decision can be undone. The response text is intentionally deterministic in this slice, so the interaction contract can be reviewed before an AI model, provider, permissions layer, or execution backend is selected.
 
 ### Assign a frame
 

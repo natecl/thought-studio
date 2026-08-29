@@ -54,6 +54,14 @@ The first CLI proves the service contract with these workflows:
 
 The later MCP adapter will expose readable Board and Frame context as Resources and the same service commands as Tools. Local clients may use stdio; hosted clients may use the protocol's remote HTTP transport. Transport details remain outside the domain service.
 
+## Local canvas adapter
+
+The localhost workspace mounts a development-only HTTP adapter through Vite. It and the CLI use the same `.thought-studio/boards.json` repository. The adapter exposes Board listing and creation, context reads, and one trusted-human canvas reconciliation command.
+
+Canvas reconciliation is a service command, not direct repository mutation. It validates the complete visible Board graph, applies optimistic aggregate versions, attributes new items to the local human Participant, and records a `canvas.synchronized` activity. This command exists because the direct-manipulation prototype currently produces complete snapshots; it is not granted to external agents, whose default mutation path remains scoped proposals.
+
+On first load, browser-local Board records are created with their existing IDs. Cached items are imported only when the canonical Board is empty. Once canonical items exist, the service is authoritative and the browser copy becomes an offline cache.
+
 ## Consequences
 
 ### Positive
@@ -66,9 +74,11 @@ The later MCP adapter will expose readable Board and Frame context as Resources 
 
 ### Costs and constraints
 
-- Existing browser-local canvas persistence must migrate behind the service in a later slice.
+- The canvas now shares the local service and repository with the CLI; hosted migration remains open.
 - The first local repositories are development boundaries, not production durability guarantees.
 - Permission principals passed to the local CLI are trusted development inputs; a remote adapter must derive them from authenticated credentials rather than caller-supplied claims.
+- The Vite HTTP adapter likewise trusts a single local-human principal and must not be deployed as an authentication boundary.
+- The local catalog uses polling and the canvas stops on content-version conflicts; live reconciliation is deferred to the multiplayer architecture.
 - Real-time presence and multiplayer conflict resolution require later decisions beyond optimistic aggregate versions.
 
 ## Rejected alternatives

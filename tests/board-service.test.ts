@@ -79,6 +79,85 @@ test("an agent can create an attributed workspace-owned Board idempotently", asy
   assert.equal(created.history[0]?.kind, "board.created");
 });
 
+test("a trusted canvas can preserve a requested legacy Board id", async () => {
+  const service = deterministicService();
+  const created = await service.createBoard(humanPrincipal(), {
+    boardId: "primary-board",
+    workspaceId: "workspace-1",
+    title: "Untitled",
+    idempotencyKey: "migrate-primary-board",
+  });
+
+  assert.equal(created.id, "primary-board");
+});
+
+test("canvas reconciliation validates the graph and attributes new visible items", async () => {
+  const service = deterministicService();
+  const human = humanPrincipal();
+  const board = await service.createBoard(human, {
+    workspaceId: "workspace-1",
+    title: "Canvas-backed board",
+    idempotencyKey: "create-canvas-backed-board",
+  });
+
+  const synchronized = await service.synchronizeCanvas(human, {
+    boardId: board.id,
+    expectedVersion: board.version,
+    idempotencyKey: "canvas-sync-1",
+    items: [
+      { id: "note-a", type: "note", x: 40, y: 50, text: "Visible thought" },
+      { id: "note-b", type: "note", x: 280, y: 50, text: "Visible evidence" },
+      { id: "line-a-b", type: "connection", x: 0, y: 0, text: "", fromId: "note-a", toId: "note-b" },
+    ],
+  });
+
+  assert.equal(synchronized.version, board.version + 1);
+  assert.equal(synchronized.contentVersion, 1);
+  assert.deepEqual(synchronized.items[0]?.createdBy, human.participant);
+  assert.equal(synchronized.history.at(-1)?.kind, "canvas.synchronized");
+
+  await assert.rejects(
+    service.synchronizeCanvas(human, {
+      boardId: board.id,
+      expectedVersion: synchronized.version,
+      idempotencyKey: "canvas-sync-invalid",
+      items: [{ id: "bad-line", type: "connection", x: 0, y: 0, text: "", fromId: "missing", toId: "also-missing" }],
+    }),
+    (error) => error instanceof BoardDomainError && error.code === "validation_failed",
+  );
+});
+
+test("canvas reconciliation refuses to overwrite a newer Board version", async () => {
+  const service = deterministicService();
+  const human = humanPrincipal();
+  const board = await service.createBoard(human, {
+    workspaceId: "workspace-1",
+    title: "Concurrent board",
+    idempotencyKey: "create-concurrent-board",
+  });
+  const changed = await service.applyChanges(human, {
+    boardId: board.id,
+    expectedVersion: board.version,
+    idempotencyKey: "newer-change",
+    operations: [{
+      operationId: "newer-note",
+      type: "object.create",
+      object: { id: "newer-note", type: "note", x: 10, y: 10, text: "Newer" },
+    }],
+  });
+
+  await assert.rejects(
+    service.synchronizeCanvas(human, {
+      boardId: board.id,
+      expectedVersion: board.version,
+      idempotencyKey: "stale-canvas-sync",
+      items: [{ id: "stale-note", type: "note", x: 20, y: 20, text: "Stale" }],
+    }),
+    (error) => error instanceof BoardDomainError && error.code === "version_conflict",
+  );
+  assert.equal((await service.getBoard(human, board.id)).version, changed.version);
+});
+
 test("an agent proposes a batch and a human accepts it with attribution intact", async () => {
   const service = deterministicService();
   const human = humanPrincipal();

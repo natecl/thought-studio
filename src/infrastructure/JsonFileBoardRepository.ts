@@ -1,8 +1,9 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { BoardDomainError } from "../src/domain/errors";
-import type { BoardRepository } from "../src/domain/repository";
-import type { BoardRecord } from "../src/domain/types";
+import { setTimeout as delay } from "node:timers/promises";
+import { BoardDomainError } from "../domain/errors";
+import type { BoardRepository } from "../domain/repository";
+import type { BoardRecord } from "../domain/types";
 
 interface BoardStoreFile {
   schemaVersion: 1;
@@ -27,9 +28,12 @@ function isBoardRecord(value: unknown): value is BoardRecord {
 }
 
 export class JsonFileBoardRepository implements BoardRepository {
+  private writeQueue: Promise<void> = Promise.resolve();
+
   constructor(private readonly filePath: string) {}
 
   async list(workspaceId?: string) {
+    await this.writeQueue;
     const store = await this.readStore();
     return store.boards
       .filter((board) => !workspaceId || board.workspaceId === workspaceId)
@@ -37,11 +41,18 @@ export class JsonFileBoardRepository implements BoardRepository {
   }
 
   async get(boardId: string) {
+    await this.writeQueue;
     const board = (await this.readStore()).boards.find((candidate) => candidate.id === boardId);
     return board ? cloneBoard(board) : null;
   }
 
   async save(board: BoardRecord, expectedVersion: number | null) {
+    const write = this.writeQueue.then(() => this.withFileLock(() => this.saveLocked(board, expectedVersion)));
+    this.writeQueue = write.catch(() => undefined);
+    return write;
+  }
+
+  private async saveLocked(board: BoardRecord, expectedVersion: number | null) {
     const store = await this.readStore();
     const index = store.boards.findIndex((candidate) => candidate.id === board.id);
     const current = store.boards[index];
@@ -55,6 +66,32 @@ export class JsonFileBoardRepository implements BoardRepository {
       store.boards[index] = cloneBoard(board);
     }
     await this.writeStore(store);
+  }
+
+  private async withFileLock<T>(task: () => Promise<T>): Promise<T> {
+    const lockPath = `${this.filePath}.lock`;
+    await mkdir(dirname(this.filePath), { recursive: true });
+    let handle;
+    for (let attempt = 0; attempt < 1_500; attempt += 1) {
+      try {
+        handle = await open(lockPath, "wx");
+        break;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        if (attempt > 0 && attempt % 100 === 0) {
+          const lockAge = Date.now() - await stat(lockPath).then((details) => details.mtimeMs).catch(() => Date.now());
+          if (lockAge > 10_000) await unlink(lockPath).catch(() => undefined);
+        }
+        await delay(10);
+      }
+    }
+    if (!handle) throw new BoardDomainError(`Board store at ${this.filePath} is busy`, "version_conflict");
+    try {
+      return await task();
+    } finally {
+      await handle.close();
+      await unlink(lockPath).catch(() => undefined);
+    }
   }
 
   private async readStore(): Promise<BoardStoreFile> {

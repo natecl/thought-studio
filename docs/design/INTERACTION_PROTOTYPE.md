@@ -49,7 +49,7 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Text and notes use the same underlying Board coordinate system and remain stable while panning or zooming.
 - A URL can enter directly as a first-class Source with its normalized link, origin, import time, and a useful local preview. No external metadata service is required by this prototype slice.
 - Images and files enter through the same Source model by dropping them onto the Board or choosing them from Add Source. Image Sources retain a visible preview; file Sources retain their name, media type, size, and original payload.
-- This local prototype caps each embedded file at 1.5 MB and stores its payload in browser persistence. That is a temporary prototype boundary, not a storage architecture decision.
+- This local prototype caps each embedded file at 1.5 MB and stores its payload in the local Board repository plus a browser cache. That is a temporary prototype boundary, not a binary-storage architecture decision.
 - Sources participate in selection, movement, framing, duplication, deletion, undo, and local persistence using the same Board entity model as manually authored material.
 - A Connection begins as an intentionally non-semantic visual relationship between two selected Board entities. It follows both endpoints, can be selected directly, and becomes Studio Blue only when selected.
 - Connections persist, duplicate with both endpoints, delete with a removed endpoint, and participate in meaningful undo and redo operations.
@@ -71,7 +71,7 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Frame placement begins as an adjustable crop-like rectangle. A selected Frame exposes four edge and four corner handles; resizing changes the context boundary without scaling contained Objects.
 - Directly dragging an Object into or out of a Frame updates its membership to match the visible spatial model.
 - Finishing a Frame placement or resize reconciles membership from each Object's visual center so the visible boundary and stored context agree.
-- Board items persist locally across reloads for this prototype milestone.
+- Board items persist through the canonical local Board service shared by the canvas and CLI. The browser copy is an offline cache and a one-time migration source for older Boards.
 - The implementation uses the selected brand tokens and exact Thought Bloom asset.
 
 ## Deliberately deferred
@@ -80,7 +80,7 @@ This milestone turns the accepted Primary Play blank canvas into a real spatial 
 - Ink and erasing
 - Shapes and semantic Connection labels
 - Automatic extraction, transcription, and quotation detection
-- Server persistence and synchronization
+- Hosted persistence, authentication, real-time synchronization, and content-conflict merging
 - Multiplayer presence
 - Live agent execution, streaming activity, and model/provider integration
 - Agent permissions, pause controls, roles, and multiplayer presence

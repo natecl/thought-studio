@@ -1,11 +1,13 @@
 import { BoardDomainError, invariant } from "./errors";
 import { applyBoardOperations, validateOperationsForScope } from "./operations";
 import type { BoardRepository } from "./repository";
+import { parseBoardItems } from "./validation";
 import type {
   BoardActivity,
   BoardCapability,
   BoardChangeProposal,
   BoardContext,
+  BoardItem,
   BoardOperation,
   BoardPrincipal,
   BoardRecord,
@@ -15,6 +17,7 @@ import type {
 } from "./types";
 
 export interface CreateBoardCommand {
+  boardId?: string;
   workspaceId: string;
   projectId?: string;
   title: string;
@@ -36,6 +39,13 @@ export interface ProposeChangesCommand {
 }
 
 export interface ApplyChangesCommand extends Omit<ProposeChangesCommand, "prompt"> {}
+
+export interface SynchronizeCanvasCommand {
+  boardId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+  items: BoardItem[];
+}
 
 export interface ReviewProposalCommand {
   boardId: string;
@@ -118,7 +128,10 @@ export class BoardService {
         entry.idempotencyKey === command.idempotencyKey && entry.actor.id === principal.participant.id));
     if (prior) return prior;
 
-    const boardId = this.dependencies.createId();
+    if (command.boardId) {
+      invariant(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(command.boardId), "boardId contains unsupported characters");
+    }
+    const boardId = command.boardId ?? this.dependencies.createId();
     const timestamp = this.dependencies.now();
     const scope: BoardScope = { type: "board", boardId };
     const created: BoardRecord = {
@@ -251,6 +264,52 @@ export class BoardService {
         idempotencyKey: command.idempotencyKey,
         operationIds: command.operations.map((operation) => operation.operationId),
         summary: `Applied ${command.operations.length} Board ${command.operations.length === 1 ? "operation" : "operations"}`,
+      })],
+    };
+    await this.repository.save(next, board.version);
+    return next;
+  }
+
+  async synchronizeCanvas(principal: BoardPrincipal, command: SynchronizeCanvasCommand) {
+    const board = await this.requireBoard(command.boardId);
+    const scope: BoardScope = { type: "board", boardId: board.id };
+    requireCapability(principal, "board:write", board.workspaceId, scope);
+    invariant(command.idempotencyKey.length > 0, "idempotencyKey is required");
+    const prior = board.history.find((entry) => entry.kind === "canvas.synchronized" &&
+      entry.idempotencyKey === command.idempotencyKey && entry.actor.id === principal.participant.id);
+    if (prior) return board;
+
+    const desiredItems = parseBoardItems(command.items);
+    if (JSON.stringify(board.items) === JSON.stringify(desiredItems)) return board;
+    requireExpectedVersion(board, command.expectedVersion);
+
+    const timestamp = this.dependencies.now();
+    const existingItems = new Map(board.items.map((item) => [item.id, item]));
+    const items = desiredItems.map((item) => {
+      const existing = existingItems.get(item.id);
+      const unchanged = existing && JSON.stringify(existing) === JSON.stringify(item);
+      return {
+        ...item,
+        createdBy: existing?.createdBy ?? item.createdBy ?? principal.participant,
+        createdAt: existing?.createdAt ?? item.createdAt ?? timestamp,
+        updatedAt: unchanged ? existing.updatedAt : timestamp,
+      } as BoardItem;
+    });
+    parseBoardItems(items);
+
+    const next: BoardRecord = {
+      ...board,
+      version: board.version + 1,
+      contentVersion: board.contentVersion + 1,
+      updatedAt: timestamp,
+      items,
+      history: [...board.history, activity(this.dependencies, {
+        kind: "canvas.synchronized",
+        actor: principal.participant,
+        scope,
+        idempotencyKey: command.idempotencyKey,
+        operationIds: [],
+        summary: `Synchronized ${items.length} visible Board ${items.length === 1 ? "item" : "items"}`,
       })],
     };
     await this.repository.save(next, board.version);

@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BoardCanvas } from "./board/BoardCanvas";
+import {
+  BoardApiError,
+  createServiceBoard,
+  listServiceBoards,
+} from "./data/boardServiceClient";
+import type { BoardSummary as ServiceBoardSummary } from "./domain/types";
 import { SidebarOpenIcon, WorkspaceSidebar, type BoardSummary } from "./shell/WorkspaceSidebar";
 
 const DEFAULT_TITLE = "Untitled";
@@ -37,8 +43,30 @@ function loadBoards(): BoardSummary[] {
   }
 }
 
+function mergeServiceBoards(current: BoardSummary[], serviceBoards: ServiceBoardSummary[]) {
+  const serviceById = new Map(serviceBoards.map((board) => [board.id, board]));
+  const merged = current.map((board) => {
+    const serviceBoard = serviceById.get(board.id);
+    return serviceBoard
+      ? { ...board, title: serviceBoard.title, project: serviceBoard.projectId ?? board.project }
+      : board;
+  });
+  const knownIds = new Set(merged.map((board) => board.id));
+  const discovered = serviceBoards
+    .filter((board) => !knownIds.has(board.id))
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    .map((board): BoardSummary => ({
+      id: board.id,
+      title: board.title,
+      recent: true,
+      project: board.projectId,
+    }));
+  return [...merged, ...discovered];
+}
+
 function App() {
   const [boards, setBoards] = useState<BoardSummary[]>(loadBoards);
+  const boardsRef = useRef(boards);
   const [activeBoardId, setActiveBoardId] = useState(() => {
     const storedId = localStorage.getItem(ACTIVE_BOARD_STORAGE_KEY);
     return boards.some((board) => board.id === storedId) ? storedId! : boards[0].id;
@@ -46,14 +74,65 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.matchMedia("(min-width: 821px)").matches);
   const activeBoard = boards.find((board) => board.id === activeBoardId) ?? boards[0];
 
-  const createBoard = useCallback(() => {
+  const createBoard = useCallback(async () => {
     const id = crypto.randomUUID();
+    try {
+      await createServiceBoard({
+        boardId: id,
+        title: DEFAULT_TITLE,
+        projectId: "Thought Studio",
+        idempotencyKey: `canvas-create:${id}`,
+      });
+    } catch (error) {
+      console.warn("The Board service is unavailable; the new Board remains in this browser.", error);
+    }
     setBoards((current) => [
       ...current,
       { id, title: DEFAULT_TITLE, recent: true, project: "Thought Studio" },
     ]);
     setActiveBoardId(id);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refresh = async (includeLegacyBoards: boolean) => {
+      try {
+        let serviceBoards = await listServiceBoards();
+        if (includeLegacyBoards) {
+          const serviceIds = new Set(serviceBoards.map((board) => board.id));
+          for (const board of boardsRef.current) {
+            if (serviceIds.has(board.id)) continue;
+            try {
+              await createServiceBoard({
+                boardId: board.id,
+                title: board.title,
+                projectId: board.project,
+                idempotencyKey: `legacy-catalog:${board.id}`,
+              });
+            } catch (error) {
+              if (!(error instanceof BoardApiError && error.code === "version_conflict")) throw error;
+            }
+          }
+          serviceBoards = await listServiceBoards();
+        }
+        if (!cancelled) setBoards((current) => mergeServiceBoards(current, serviceBoards));
+      } catch (error) {
+        if (!cancelled) console.warn("The canonical Board catalog is not available yet.", error);
+      }
+    };
+
+    void refresh(true);
+    const interval = window.setInterval(() => void refresh(true), 2_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    boardsRef.current = boards;
+  }, [boards]);
 
   const selectBoard = (boardId: string) => {
     setActiveBoardId(boardId);

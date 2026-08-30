@@ -1,6 +1,8 @@
 export type {
   AgentSourceReference,
+  BoardCardRole,
   BoardConnection,
+  BoardConnectionKind,
   BoardFrame,
   BoardItem,
   BoardItemType,
@@ -8,6 +10,7 @@ export type {
   BoardObjectType,
   BoardProposal,
   BoardSource,
+  BoardSourceFormat,
   BoardSourceKind,
   Camera,
 } from "../domain/types";

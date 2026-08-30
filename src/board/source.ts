@@ -1,4 +1,6 @@
 import type { BoardSource } from "./types";
+import { inferSourceFormat } from "./sourceFormat";
+export { inferSourceFormat, sourceFormatGlyph, sourceFormatLabel } from "./sourceFormat";
 
 const DEFAULT_SOURCE_SIZE = { width: 304, height: 184 };
 const IMAGE_SOURCE_SIZE = { width: 304, height: 286 };
@@ -47,6 +49,7 @@ export function createUrlSource(value: string, x: number, y: number): BoardSourc
     id: crypto.randomUUID(),
     type: "source",
     sourceKind: "url",
+    sourceFormat: inferSourceFormat({ sourceKind: "url", url: url.toString() }),
     x: x - DEFAULT_SOURCE_SIZE.width / 2,
     y: y - DEFAULT_SOURCE_SIZE.height / 2,
     text: titleFromUrl(url),
@@ -81,6 +84,7 @@ export async function createFileSource(file: File, x: number, y: number): Promis
     id: crypto.randomUUID(),
     type: "source",
     sourceKind,
+    sourceFormat: inferSourceFormat({ sourceKind, url: dataUrl, mimeType: file.type, fileName: file.name }),
     x: x - size.width / 2,
     y: y - size.height / 2,
     text: file.name || (sourceKind === "image" ? "Untitled image" : "Untitled file"),

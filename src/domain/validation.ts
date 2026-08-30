@@ -1,7 +1,10 @@
 import { invariant } from "./errors";
 import type {
   AgentSourceReference,
+  BoardCardRole,
+  BoardConnectionKind,
   BoardItem,
+  BoardSourceFormat,
   BoardSourceKind,
   ParticipantRef,
 } from "./types";
@@ -24,6 +27,20 @@ function isStringArray(value: unknown): value is string[] {
 
 function isSourceKind(value: unknown): value is BoardSourceKind {
   return value === "url" || value === "image" || value === "file";
+}
+
+function isSourceFormat(value: unknown): value is BoardSourceFormat {
+  return value === "webpage" || value === "video" || value === "document" || value === "code" ||
+    value === "data" || value === "image" || value === "file";
+}
+
+function isCardRole(value: unknown): value is BoardCardRole {
+  return value === "thought" || value === "evidence" || value === "question" || value === "decision";
+}
+
+function isConnectionKind(value: unknown): value is BoardConnectionKind {
+  return value === "relates" || value === "supports" || value === "challenges" ||
+    value === "depends_on" || value === "leads_to" || value === "references";
 }
 
 function isParticipant(value: unknown): value is ParticipantRef {
@@ -50,7 +67,8 @@ function isBoardItem(value: unknown): value is BoardItem {
     !isFiniteNumber(value.y) || typeof value.text !== "string" || !hasOptionalAttribution(value)) return false;
 
   if (value.type === "text" || value.type === "note") {
-    return isOptionalString(value.sourceId) && isOptionalString(value.sourceTitle) &&
+    return (value.semanticRole === undefined || isCardRole(value.semanticRole)) &&
+      isOptionalString(value.sourceId) && isOptionalString(value.sourceTitle) &&
       isOptionalString(value.sourceOrigin) && isOptionalString(value.sourceUrl) &&
       (value.sourceKind === undefined || isSourceKind(value.sourceKind)) &&
       isOptionalString(value.sourceFileName) &&
@@ -63,7 +81,7 @@ function isBoardItem(value: unknown): value is BoardItem {
   }
 
   if (value.type === "source") {
-    return isSourceKind(value.sourceKind) && typeof value.url === "string" &&
+    return isSourceKind(value.sourceKind) && (value.sourceFormat === undefined || isSourceFormat(value.sourceFormat)) && typeof value.url === "string" &&
       typeof value.origin === "string" && typeof value.importedAt === "string" &&
       isFiniteNumber(value.width) && value.width > 0 && isFiniteNumber(value.height) && value.height > 0 &&
       isOptionalString(value.mimeType) && isOptionalString(value.fileName) &&
@@ -72,7 +90,8 @@ function isBoardItem(value: unknown): value is BoardItem {
   }
 
   if (value.type === "connection") {
-    return typeof value.fromId === "string" && typeof value.toId === "string" && value.fromId !== value.toId;
+    return typeof value.fromId === "string" && typeof value.toId === "string" && value.fromId !== value.toId &&
+      (value.relation === undefined || isConnectionKind(value.relation));
   }
 
   if (value.type === "frame") {

@@ -18,17 +18,29 @@ import {
 import { BoardToolbar, type CanvasTool } from "./BoardToolbar";
 import { connectionPath } from "./connection";
 import {
+  CARD_ROLES,
+  CONNECTION_KINDS,
+  connectionKindLabel,
+  inferCardRole,
+  inferConnectionKind,
+  splitCardText,
+} from "./semantics";
+import {
   createFileSource as buildFileSource,
   createUrlSource as buildUrlSource,
   formatFileSize,
   formatSourceDate,
+  inferSourceFormat,
   parseSourceUrl,
-  sourceInitial,
+  sourceFormatGlyph,
+  sourceFormatLabel,
 } from "./source";
 import { useBoardHistory } from "./useBoardHistory";
 import type {
   AgentSourceReference,
+  BoardCardRole,
   BoardConnection,
+  BoardConnectionKind,
   BoardFrame,
   BoardItem,
   BoardObject,
@@ -363,6 +375,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       x: type === "note" ? point.x - 110 : point.x,
       y: type === "note" ? point.y - 82 : point.y,
       text: "",
+      semanticRole: "thought",
     };
     commit([...items, item]);
     setSelectedIds(new Set([id]));
@@ -438,6 +451,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       sourceUrl: source.url,
       sourceKind: source.sourceKind,
       sourceFileName: source.fileName,
+      semanticRole: "evidence",
     };
     commit([...items, note]);
     setSelectedIds(new Set([id]));
@@ -554,6 +568,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       agentScopeIds: proposal.scopeIds,
       agentScopeLabels: proposal.scopeLabels,
       agentSources: proposal.sources,
+      semanticRole: "thought",
     };
     commit([...items.filter((item) => item.id !== proposal.id), note]);
     setSelectedIds(new Set([note.id]));
@@ -698,11 +713,30 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       text: "",
       fromId: from.id,
       toId: to.id,
+      relation: "relates",
     };
     commit([...items, connection]);
     setSelectedIds(new Set([connection.id]));
     setEditingId(null);
     setAnnouncement("Objects connected");
+  }, [commit, items, selectedIds]);
+
+  const setSelectedCardRole = useCallback((role: BoardCardRole) => {
+    if (selectedIds.size !== 1) return;
+    const selectedId = [...selectedIds][0];
+    const item = items.find((candidate) => candidate.id === selectedId);
+    if (!item || (item.type !== "note" && item.type !== "text")) return;
+    commit(items.map((candidate) => candidate.id === selectedId ? { ...candidate, semanticRole: role } : candidate));
+    setAnnouncement(`${CARD_ROLES.find((candidate) => candidate.value === role)?.label ?? role} role applied`);
+  }, [commit, items, selectedIds]);
+
+  const setSelectedConnectionKind = useCallback((relation: BoardConnectionKind) => {
+    if (selectedIds.size !== 1) return;
+    const selectedId = [...selectedIds][0];
+    const connection = items.find((candidate) => candidate.id === selectedId);
+    if (!connection || connection.type !== "connection") return;
+    commit(items.map((candidate) => candidate.id === selectedId ? { ...candidate, relation } : candidate));
+    setAnnouncement(`${connectionKindLabel(relation)} connection applied`);
   }, [commit, items, selectedIds]);
 
   const beginEditing = useCallback((item: BoardItem) => {
@@ -968,13 +1002,13 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   }, [addUrlSource, viewportCenterWorld]);
 
   useLayoutEffect(() => {
-    if (selectedIds.size < 2) {
+    if (selectedIds.size < 1) {
       setSelectionBounds(null);
       return;
     }
     const measure = () => {
       const selectedRects = [...readItemRects()].filter(([id]) => selectedIds.has(id)).map(([, rect]) => rect);
-      if (selectedRects.length < 2) {
+      if (selectedRects.length < 1) {
         setSelectionBounds(null);
         return;
       }
@@ -1119,7 +1153,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       setIsPanning(true);
       return;
     }
-    if (event.button !== 0 || target.closest("[data-board-item], .board-toolbar, .multi-selection-toolbar, .canvas-context-menu")) return;
+    if (event.button !== 0 || target.closest("[data-board-item], .board-toolbar, .multi-selection-toolbar, .semantic-selection-toolbar, .canvas-context-menu")) return;
     if (editingId) finishEditing();
     const point = clientToViewport(event.clientX, event.clientY);
     if (activeTool === "frame") {
@@ -1291,12 +1325,16 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const canConnectSelection = items.filter((item) => selectedIds.has(item.id) && isConnectable(item)).length === 2 &&
     [...selectedIds].every((id) => items.find((item) => item.id === id)?.type !== "connection");
   const canAskSelection = items.filter((item) => selectedIds.has(item.id) && item.type !== "proposal").length >= 2;
+  const selectedItem = selectedIds.size === 1 ? items.find((item) => item.id === [...selectedIds][0]) : undefined;
+  const selectedCard = selectedItem?.type === "note" ? selectedItem : undefined;
+  const selectedConnection = selectedItem?.type === "connection" ? selectedItem : undefined;
+  const zoomMode = camera.scale < 0.46 ? "overview" : camera.scale < 0.82 ? "medium" : "detail";
 
   return (
     <>
       <section
       ref={viewportRef}
-      className={`board-viewport is-${activeTool}-tool${spacePressed ? " is-space-ready" : ""}${isPanning ? " is-panning" : ""}${isFileDragging ? " is-file-dragging" : ""}`}
+      className={`board-viewport is-${activeTool}-tool is-${zoomMode}-zoom${spacePressed ? " is-space-ready" : ""}${isPanning ? " is-panning" : ""}${isFileDragging ? " is-file-dragging" : ""}`}
       aria-label={`${title} canvas`}
       tabIndex={0}
       onWheel={handleWheel}
@@ -1312,7 +1350,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       onDrop={handleFileDrop}
       onDoubleClick={(event) => {
         const target = event.target as Element;
-        if (target.closest("[data-board-item], .board-toolbar, .multi-selection-toolbar") || activeTool !== "select") return;
+        if (target.closest("[data-board-item], .board-toolbar, .multi-selection-toolbar, .semantic-selection-toolbar") || activeTool !== "select") return;
         createItem("text", screenToWorld(event.clientX, event.clientY));
       }}
       onContextMenu={handleContextMenu}
@@ -1327,18 +1365,25 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       )}
       <div className="canvas-world" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
         <svg className="connection-layer" role="group" aria-label="Board Connections">
+          <defs>
+            <marker id="connection-arrow-black" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 8 4 L 0 8 z" fill="#111111" /></marker>
+            <marker id="connection-arrow-blue" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 8 4 L 0 8 z" fill="#3F6EDB" /></marker>
+            <marker id="connection-arrow-red" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 8 4 L 0 8 z" fill="#E74E3F" /></marker>
+            <marker id="connection-arrow-green" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 8 4 L 0 8 z" fill="#3CAC6E" /></marker>
+          </defs>
           {items.filter((item): item is BoardConnection => item.type === "connection").map((connection) => {
             const path = connectionPath(connection, items);
             if (!path) return null;
             const from = items.find((item) => item.id === connection.fromId);
             const to = items.find((item) => item.id === connection.toId);
             const selected = selectedIds.has(connection.id);
+            const relation = inferConnectionKind(connection, items);
             return (
               <g
                 key={connection.id}
                 data-board-item
                 data-board-item-id={connection.id}
-                className={`connection-object${selected ? " is-selected" : ""}`}
+                className={`connection-object is-${relation}${selected ? " is-selected" : ""}`}
                 role="group"
                 aria-label={`Connection from ${from?.text || from?.type || "Object"} to ${to?.text || to?.type || "Object"}${selected ? ", selected" : ""}`}
                 tabIndex={0}
@@ -1348,6 +1393,12 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                 <path className="connection-line" d={path.d} />
                 <circle className="connection-endpoint" cx={path.start.x} cy={path.start.y} r="3" />
                 <circle className="connection-endpoint" cx={path.end.x} cy={path.end.y} r="3" />
+                {relation !== "relates" && (
+                  <g className="connection-label" transform={`translate(${path.label.x} ${path.label.y})`}>
+                    <rect x="-36" y="-9" width="72" height="18" rx="9" />
+                    <text textAnchor="middle" dominantBaseline="central">{connectionKindLabel(relation)}</text>
+                  </g>
+                )}
               </g>
             );
           })}
@@ -1355,12 +1406,13 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         {items.filter((item) => item.type !== "connection").map((item) => {
           const selected = selectedIds.has(item.id);
           const editing = editingId === item.id;
+          const cardRole = item.type === "note" ? inferCardRole(item) : undefined;
           return (
             <div
               key={item.id}
               data-board-item
               data-board-item-id={item.id}
-              className={`board-object ${item.type}-object${item.type === "note" && item.sourceId ? " has-source" : ""}${item.type === "note" && item.sourceLinkKind === "quote" ? " is-quote" : ""}${item.type === "note" && item.authoredBy === "agent" ? " is-agent-authored" : ""}${selected ? " is-selected" : ""}${editing ? " is-editing" : ""}`}
+              className={`board-object ${item.type}-object${cardRole ? ` is-role-${cardRole}` : ""}${item.type === "note" && item.sourceId ? " has-source" : ""}${item.type === "note" && item.sourceLinkKind === "quote" ? " is-quote" : ""}${selected ? " is-selected" : ""}${editing ? " is-editing" : ""}`}
               style={{
                 transform: `translate(${item.x}px, ${item.y}px)`,
                 ...(item.type === "frame" || item.type === "source" || item.type === "proposal" ? { width: item.width, height: item.height } : {}),
@@ -1443,12 +1495,11 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
                     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); finishEditing(); }
                   }}
                 />
+              ) : item.type === "note" ? (
+                <SemanticCardSurface item={item} role={cardRole ?? "thought"} />
               ) : <div className="object-surface">{item.text}</div>}
               {item.type === "note" && item.sourceId && (
                 <SourceLineageFooter note={item} sourceExists={items.some((candidate) => candidate.id === item.sourceId && candidate.type === "source")} onLocateSource={locateSource} />
-              )}
-              {item.type === "note" && item.authoredBy === "agent" && (
-                <AgentLineageFooter note={item} onLocateScope={locateAgentScope} />
               )}
             </div>
           );
@@ -1477,7 +1528,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
           <polyline points={selectionDraft.points.map((point) => `${point.x},${point.y}`).join(" ")} />
         </svg>
       )}
-      {selectionBounds && (
+      {selectionBounds && selectedIds.size > 1 && (
         <>
           <div className="multi-selection-bounds" aria-hidden="true" style={{ left: selectionBounds.left - 7, top: selectionBounds.top - 7, width: selectionBounds.width + 14, height: selectionBounds.height + 14 }} />
           <div className="multi-selection-toolbar" role="toolbar" aria-label={`${selectedIds.size} selected Objects`} style={{ left: selectionBounds.left + selectionBounds.width / 2, top: selectionToolbarTop }} onPointerDown={(event) => event.stopPropagation()}>
@@ -1490,6 +1541,57 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
             <button className="is-destructive" type="button" onClick={deleteSelected} title="Delete">Delete</button>
           </div>
         </>
+      )}
+      {selectionBounds && selectedCard && (
+        <div
+          className="semantic-selection-toolbar"
+          role="toolbar"
+          aria-label="Card role"
+          style={{ left: selectionBounds.left + selectionBounds.width / 2, top: selectionToolbarTop }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <span>Card role</span>
+          {CARD_ROLES.map((role) => {
+            const active = inferCardRole(selectedCard) === role.value;
+            return (
+              <button
+                key={role.value}
+                className={`is-role-${role.value}${active ? " is-active" : ""}`}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setSelectedCardRole(role.value)}
+                title={`Use ${role.label.toLowerCase()} role`}
+              >
+                <span aria-hidden="true">{role.symbol}</span>{role.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {selectionBounds && selectedConnection && (
+        <div
+          className="semantic-selection-toolbar is-connection-toolbar"
+          role="toolbar"
+          aria-label="Connection meaning"
+          style={{ left: selectionBounds.left + selectionBounds.width / 2, top: selectionToolbarTop }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <span>Relationship</span>
+          {CONNECTION_KINDS.map((kind) => {
+            const active = inferConnectionKind(selectedConnection, items) === kind.value;
+            return (
+              <button
+                key={kind.value}
+                className={`is-connection-${kind.value}${active ? " is-active" : ""}`}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setSelectedConnectionKind(kind.value)}
+              >
+                {kind.label}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {sourceComposer && (
@@ -1619,6 +1721,21 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   );
 }
 
+function SemanticCardSurface({ item, role }: { item: BoardObject; role: BoardCardRole }) {
+  const content = splitCardText(item.text);
+  const roleDefinition = CARD_ROLES.find((candidate) => candidate.value === role) ?? CARD_ROLES[0];
+  return (
+    <article className="object-surface semantic-card-surface">
+      <header className="semantic-card-kicker">
+        <span className="semantic-card-symbol" aria-hidden="true">{roleDefinition.symbol}</span>
+        <span>{roleDefinition.label}</span>
+      </header>
+      <strong className="semantic-card-title">{content.title}</strong>
+      {content.detail && <p className="semantic-card-detail">{content.detail}</p>}
+    </article>
+  );
+}
+
 function SourceCard({
   source,
   selected,
@@ -1630,12 +1747,13 @@ function SourceCard({
 }) {
   const isUrl = source.sourceKind === "url";
   const isImage = source.sourceKind === "image";
-  const sourceLabel = isUrl ? "Source" : isImage ? "Image source" : "File source";
+  const format = source.sourceFormat || inferSourceFormat(source);
+  const sourceLabel = sourceFormatLabel(format);
   const fileDetail = source.mimeType && source.mimeType !== "application/octet-stream"
     ? `${formatFileSize(source.fileSize)} · ${source.mimeType.replace(/^application\//, "")}`
     : formatFileSize(source.fileSize);
   return (
-    <article className={`source-surface is-${source.sourceKind}`}>
+    <article className={`source-surface is-${source.sourceKind} is-format-${format}`}>
       {selected && (
         <div className="source-fragment-toolbar" role="toolbar" aria-label="Create from Source" onPointerDown={(event) => event.stopPropagation()}>
           <span>Keep context</span>
@@ -1644,7 +1762,7 @@ function SourceCard({
         </div>
       )}
       <header className="source-kicker">
-        <span className="source-kicker-mark" aria-hidden="true" />
+        <span className="source-kicker-mark" aria-hidden="true">{sourceFormatGlyph(format)}</span>
         <span>{sourceLabel}</span>
         <time dateTime={source.importedAt} title={`Imported ${new Date(source.importedAt).toLocaleString()}`}>
           {formatSourceDate(source.importedAt)}
@@ -1660,8 +1778,8 @@ function SourceCard({
         </div>
       ) : (
         <div className="source-preview">
-          <span className={`source-origin-mark${isUrl ? "" : " is-file"}`} aria-hidden="true">
-            {isUrl ? sourceInitial(source.origin) : <FileSourceGlyph />}
+          <span className={`source-origin-mark is-format-${format}${isUrl ? "" : " is-file"}`} aria-hidden="true">
+            {sourceFormatGlyph(format)}
           </span>
           <div className="source-preview-copy">
             <strong>{source.text}</strong>

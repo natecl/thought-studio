@@ -997,6 +997,7 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
       const target = event.target as HTMLElement | null;
       const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement || target?.isContentEditable;
+      const command = event.metaKey || event.ctrlKey;
       if (event.key === "Escape") {
         if (agentComposer) {
           setAgentComposer(null);
@@ -1018,8 +1019,25 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         else setSelectedIds(new Set());
         return;
       }
+      if (command && (event.key === "+" || event.key === "=")) {
+        event.preventDefault();
+        zoomAtViewportCenter(1.12);
+        setAnnouncement("Zoomed in");
+        return;
+      }
+      if (command && event.key === "-") {
+        event.preventDefault();
+        zoomAtViewportCenter(1 / 1.12);
+        setAnnouncement("Zoomed out");
+        return;
+      }
+      if (command && event.key === "0") {
+        event.preventDefault();
+        setCamera(DEFAULT_CAMERA);
+        setAnnouncement("View reset");
+        return;
+      }
       if (isTyping) return;
-      const command = event.metaKey || event.ctrlKey;
       if (command && event.key.toLowerCase() === "a") {
         event.preventDefault();
         setSelectedIds(new Set(items.map((item) => item.id)));
@@ -1275,7 +1293,8 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
   const canAskSelection = items.filter((item) => selectedIds.has(item.id) && item.type !== "proposal").length >= 2;
 
   return (
-    <section
+    <>
+      <section
       ref={viewportRef}
       className={`board-viewport is-${activeTool}-tool${spacePressed ? " is-space-ready" : ""}${isPanning ? " is-panning" : ""}${isFileDragging ? " is-file-dragging" : ""}`}
       aria-label={`${title} canvas`}
@@ -1552,26 +1571,6 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         onChange={chooseSourceFiles}
       />
 
-      <BoardToolbar
-        activeTool={activeTool}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        zoomPercent={Math.round(camera.scale * 100)}
-        onSelectTool={(tool) => {
-          setActiveTool(tool);
-          setAnnouncement(tool === "hand" ? "Pan tool active" : tool === "lasso" ? "Lasso tool active" : "Select tool active");
-        }}
-        onAddText={() => { setActiveTool("select"); createAtViewportCenter("text"); }}
-        onAddNote={() => { setActiveTool("select"); createAtViewportCenter("note"); }}
-        onAddSource={() => openSourceComposer()}
-        onAddFrame={createFrameFromSelection}
-        onUndo={() => { undo(); setAnnouncement("Undone"); }}
-        onRedo={() => { redo(); setAnnouncement("Redone"); }}
-        onZoomOut={() => { zoomAtViewportCenter(1 / 1.12); setAnnouncement("Zoomed out"); }}
-        onResetView={() => { setCamera(DEFAULT_CAMERA); setAnnouncement("View reset"); }}
-        onZoomIn={() => { zoomAtViewportCenter(1.12); setAnnouncement("Zoomed in"); }}
-      />
-
       {(serviceSyncState === "offline" || serviceSyncState === "conflict") && (
         <div className={`board-service-status is-${serviceSyncState}`} role="status">
           <span aria-hidden="true" />
@@ -1595,7 +1594,28 @@ export function BoardCanvas({ boardId, title }: BoardCanvasProps) {
         </div>
       )}
       <p className="sr-only" aria-live="polite">{announcement}</p>
-    </section>
+      </section>
+
+      <BoardToolbar
+        activeTool={activeTool}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        zoomPercent={Math.round(camera.scale * 100)}
+        onSelectTool={(tool) => {
+          setActiveTool(tool);
+          setAnnouncement(tool === "hand" ? "Pan tool active" : tool === "lasso" ? "Lasso tool active" : "Select tool active");
+        }}
+        onAddText={() => { setActiveTool("select"); createAtViewportCenter("text"); }}
+        onAddNote={() => { setActiveTool("select"); createAtViewportCenter("note"); }}
+        onAddSource={() => openSourceComposer()}
+        onAddFrame={createFrameFromSelection}
+        onUndo={() => { undo(); setAnnouncement("Undone"); }}
+        onRedo={() => { redo(); setAnnouncement("Redone"); }}
+        onZoomOut={() => { zoomAtViewportCenter(1 / 1.12); setAnnouncement("Zoomed out"); }}
+        onResetView={() => { setCamera(DEFAULT_CAMERA); setAnnouncement("View reset"); }}
+        onZoomIn={() => { zoomAtViewportCenter(1.12); setAnnouncement("Zoomed in"); }}
+      />
+    </>
   );
 }
 

@@ -226,8 +226,22 @@ function App() {
         createBoard();
       }
     };
+    const preventPageZoomShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && ["+", "=", "-", "0"].includes(event.key)) {
+        event.preventDefault();
+      }
+    };
+    const preventPagePinchZoom = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey) event.preventDefault();
+    };
+    window.addEventListener("keydown", preventPageZoomShortcut, { capture: true });
     window.addEventListener("keydown", createWithShortcut);
-    return () => window.removeEventListener("keydown", createWithShortcut);
+    window.addEventListener("wheel", preventPagePinchZoom, { capture: true, passive: false });
+    return () => {
+      window.removeEventListener("keydown", preventPageZoomShortcut, { capture: true });
+      window.removeEventListener("keydown", createWithShortcut);
+      window.removeEventListener("wheel", preventPagePinchZoom, { capture: true });
+    };
   }, [createBoard]);
 
   return (

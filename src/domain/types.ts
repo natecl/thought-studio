@@ -1,5 +1,8 @@
 export type BoardObjectType = "text" | "note";
+export type BoardCardRole = "thought" | "evidence" | "question" | "decision";
+export type BoardConnectionKind = "relates" | "supports" | "challenges" | "depends_on" | "leads_to" | "references";
 export type BoardSourceKind = "url" | "image" | "file";
+export type BoardSourceFormat = "webpage" | "video" | "document" | "code" | "data" | "image" | "file";
 export type BoardItemType = BoardObjectType | "source" | "connection" | "frame" | "proposal";
 export type ParticipantKind = "human" | "agent" | "import" | "system";
 export type BoardCapability = "board:create" | "board:read" | "board:propose" | "board:write" | "proposal:review";
@@ -43,6 +46,7 @@ export interface BoardEntityBase {
 
 export interface BoardObject extends BoardEntityBase {
   type: BoardObjectType;
+  semanticRole?: BoardCardRole;
   sourceId?: string;
   sourceLinkKind?: "note" | "quote";
   sourceTitle?: string;
@@ -61,6 +65,7 @@ export interface BoardObject extends BoardEntityBase {
 export interface BoardSource extends BoardEntityBase {
   type: "source";
   sourceKind: BoardSourceKind;
+  sourceFormat?: BoardSourceFormat;
   url: string;
   origin: string;
   importedAt: string;
@@ -76,6 +81,7 @@ export interface BoardConnection extends BoardEntityBase {
   type: "connection";
   fromId: string;
   toId: string;
+  relation?: BoardConnectionKind;
 }
 
 export interface BoardFrame extends BoardEntityBase {

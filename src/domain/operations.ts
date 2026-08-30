@@ -26,6 +26,20 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(isString);
 }
 
+function isCardRole(value: unknown) {
+  return value === "thought" || value === "evidence" || value === "question" || value === "decision";
+}
+
+function isConnectionKind(value: unknown) {
+  return value === "relates" || value === "supports" || value === "challenges" ||
+    value === "depends_on" || value === "leads_to" || value === "references";
+}
+
+function isSourceFormat(value: unknown) {
+  return value === "webpage" || value === "video" || value === "document" || value === "code" ||
+    value === "data" || value === "image" || value === "file";
+}
+
 function assertEntityBase(
   value: unknown,
   message: string,
@@ -43,6 +57,7 @@ function parseOperation(value: unknown, index: number): BoardOperation {
       const object = value.object;
       assertEntityBase(object, `Operation ${index + 1} requires a valid object`);
       invariant(object.type === "text" || object.type === "note", `Operation ${index + 1} has an unsupported Object type`);
+      invariant(object.semanticRole === undefined || isCardRole(object.semanticRole), `Operation ${index + 1} has an unsupported card role`);
       return value as unknown as BoardOperation;
     }
     case "source.create": {
@@ -50,6 +65,7 @@ function parseOperation(value: unknown, index: number): BoardOperation {
       assertEntityBase(source, `Operation ${index + 1} requires a valid Source`);
       invariant(source.type === "source", `Operation ${index + 1} requires Source type`);
       invariant(source.sourceKind === "url" || source.sourceKind === "image" || source.sourceKind === "file", `Operation ${index + 1} has an unsupported Source kind`);
+      invariant(source.sourceFormat === undefined || isSourceFormat(source.sourceFormat), `Operation ${index + 1} has an unsupported Source format`);
       invariant(typeof source.url === "string" && isString(source.origin) && isString(source.importedAt), `Operation ${index + 1} requires Source provenance`);
       invariant(isFiniteNumber(source.width) && isFiniteNumber(source.height), `Operation ${index + 1} requires Source dimensions`);
       return value as unknown as BoardOperation;
@@ -58,6 +74,7 @@ function parseOperation(value: unknown, index: number): BoardOperation {
       const connection = value.connection;
       assertEntityBase(connection, `Operation ${index + 1} requires a valid Connection`);
       invariant(connection.type === "connection" && isString(connection.fromId) && isString(connection.toId), `Operation ${index + 1} requires Connection endpoints`);
+      invariant(connection.relation === undefined || isConnectionKind(connection.relation), `Operation ${index + 1} has an unsupported Connection relation`);
       return value as unknown as BoardOperation;
     }
     case "frame.create": {

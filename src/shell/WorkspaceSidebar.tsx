@@ -28,24 +28,16 @@ export function WorkspaceSidebar({
   const [query, setQuery] = useState("");
   const [expandedProjects, setExpandedProjects] = useState(() => new Set(["Thought Studio"]));
   const [archivedExpanded, setArchivedExpanded] = useState(false);
-  const [openBoardMenuId, setOpenBoardMenuId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<BoardSummary | null>(null);
 
   useEffect(() => {
-    const closeMenu = (event: PointerEvent) => {
-      const target = event.target as Element | null;
-      if (!target?.closest("[data-board-menu-root]")) setOpenBoardMenuId(null);
-    };
     const closeWithEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpenBoardMenuId(null);
         setDeleteCandidate(null);
       }
     };
-    document.addEventListener("pointerdown", closeMenu);
     document.addEventListener("keydown", closeWithEscape);
     return () => {
-      document.removeEventListener("pointerdown", closeMenu);
       document.removeEventListener("keydown", closeWithEscape);
     };
   }, []);
@@ -114,8 +106,6 @@ export function WorkspaceSidebar({
               onTogglePin={onTogglePin}
               onSetArchived={onSetArchived}
               onRequestDelete={setDeleteCandidate}
-              menuOpen={openBoardMenuId === board.id}
-              onToggleMenu={(boardId) => setOpenBoardMenuId((current) => current === boardId ? null : boardId)}
               canDelete={boards.length > 1}
             />
           ))}
@@ -151,8 +141,6 @@ export function WorkspaceSidebar({
                         onTogglePin={onTogglePin}
                         onSetArchived={onSetArchived}
                         onRequestDelete={setDeleteCandidate}
-                        menuOpen={openBoardMenuId === board.id}
-                        onToggleMenu={(boardId) => setOpenBoardMenuId((current) => current === boardId ? null : boardId)}
                         canDelete={boards.length > 1}
                         nested
                       />
@@ -175,8 +163,6 @@ export function WorkspaceSidebar({
                 onTogglePin={onTogglePin}
                 onSetArchived={onSetArchived}
                 onRequestDelete={setDeleteCandidate}
-                menuOpen={openBoardMenuId === board.id}
-                onToggleMenu={(boardId) => setOpenBoardMenuId((current) => current === boardId ? null : boardId)}
                 canDelete={boards.length > 1}
               />
             ))}
@@ -207,8 +193,6 @@ export function WorkspaceSidebar({
                 onTogglePin={onTogglePin}
                 onSetArchived={onSetArchived}
                 onRequestDelete={setDeleteCandidate}
-                menuOpen={openBoardMenuId === board.id}
-                onToggleMenu={(boardId) => setOpenBoardMenuId((current) => current === boardId ? null : boardId)}
                 canDelete={boards.length > 1}
               />
             ))}
@@ -278,8 +262,6 @@ function BoardRow({
   onTogglePin,
   onSetArchived,
   onRequestDelete,
-  menuOpen,
-  onToggleMenu,
   canDelete,
 }: {
   board: BoardSummary;
@@ -289,14 +271,11 @@ function BoardRow({
   onTogglePin: (boardId: string) => void;
   onSetArchived: (boardId: string, archived: boolean) => void | Promise<void>;
   onRequestDelete: (board: BoardSummary) => void;
-  menuOpen: boolean;
-  onToggleMenu: (boardId: string) => void;
   canDelete: boolean;
 }) {
   return (
     <div
       className={`board-row-shell${active ? " is-active" : ""}${nested ? " is-nested" : ""}`}
-      data-board-menu-root
       onPointerDown={(event) => event.stopPropagation()}
     >
       <button
@@ -309,7 +288,8 @@ function BoardRow({
         <span>{board.title}</span>
       </button>
       <div className="board-row-actions">
-        {!board.archived && (
+        {!board.archived ? (
+          <>
           <button
             className={`pin-board-button${board.pinned ? " is-pinned" : ""}`}
             type="button"
@@ -319,46 +299,40 @@ function BoardRow({
           >
             <PinIcon />
           </button>
+          <button
+            className="archive-board-button"
+            type="button"
+            aria-label={`Archive ${board.title}`}
+            title="Archive"
+            onClick={() => void onSetArchived(board.id, true)}
+          >
+            <ArchiveIcon restored={false} />
+          </button>
+          </>
+        ) : (
+          <>
+            <button
+              className="archive-board-button"
+              type="button"
+              aria-label={`Restore ${board.title}`}
+              title="Restore to sidebar"
+              onClick={() => void onSetArchived(board.id, false)}
+            >
+              <ArchiveIcon restored />
+            </button>
+            <button
+              className="delete-board-button"
+              type="button"
+              aria-label={`Delete ${board.title}`}
+              title={canDelete ? "Delete permanently" : "A workspace must keep at least one Board"}
+              disabled={!canDelete}
+              onClick={() => onRequestDelete(board)}
+            >
+              <TrashIcon />
+            </button>
+          </>
         )}
-        <button
-          className="board-more-button"
-          type="button"
-          aria-label={`More options for ${board.title}`}
-          aria-expanded={menuOpen}
-          onClick={() => onToggleMenu(board.id)}
-        >
-          <MoreIcon />
-        </button>
       </div>
-      {menuOpen && (
-        <div className="board-row-menu" role="menu" aria-label={`${board.title} actions`}>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              onToggleMenu(board.id);
-              void onSetArchived(board.id, !board.archived);
-            }}
-          >
-            <ArchiveIcon restored={Boolean(board.archived)} />
-            <span>{board.archived ? "Restore to sidebar" : "Archive"}</span>
-          </button>
-          <button
-            className="is-destructive"
-            type="button"
-            role="menuitem"
-            disabled={!canDelete}
-            title={canDelete ? undefined : "A workspace must keep at least one Board"}
-            onClick={() => {
-              onToggleMenu(board.id);
-              onRequestDelete(board);
-            }}
-          >
-            <TrashIcon />
-            <span>Delete…</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 }

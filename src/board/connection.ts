@@ -43,5 +43,9 @@ export function connectionPath(connection: BoardConnection, items: BoardItem[]) 
     d: `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`,
     start,
     end,
+    label: {
+      x: 0.25 * start.x + 0.5 * control.x + 0.25 * end.x,
+      y: 0.25 * start.y + 0.5 * control.y + 0.25 * end.y,
+    },
   };
 }
